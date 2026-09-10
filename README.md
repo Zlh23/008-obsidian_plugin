@@ -70,3 +70,15 @@ my-project/
 ```text
 <Vault>/.obsidian/plugins/tree-view/
 ```
+
+## 自动发布
+
+仓库已包含 GitHub Actions 工作流。推送到 `main` 后，Release Please 会自动创建或更新版本 PR；合并该 PR 后会自动创建 Git Tag 和 GitHub Release。
+
+首次启用时：
+
+1. 将工作流文件提交并推送到 `main`。
+2. 在 GitHub 的 Actions 页面确认工作流成功运行。
+3. 合并自动生成的版本 PR。
+
+之后只需正常提交代码并合并版本 PR。发布版本必须与 `manifest.json` 的版本号保持一致。
