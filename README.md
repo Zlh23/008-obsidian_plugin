@@ -75,6 +75,8 @@ my-project/
 
 仓库已包含 GitHub Actions 工作流。推送到 `main` 后，Release Please 会自动创建或更新版本 PR；合并该 PR 后会自动创建 Git Tag 和 GitHub Release。
 
+工作流使用支持 Node.js 24 的 Release Please Action，避免 GitHub Actions 的 Node.js 20 弃用警告。
+
 首次启用时：
 
 1. 将工作流文件提交并推送到 `main`。
