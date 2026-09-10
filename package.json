@@ -1,6 +1,6 @@
 {
   "name": "tree-view",
-  "version": "1.0.1",
+  "version": "5.2.1",
   "private": true,
   "scripts": {
     "check": "node --check main.js",
