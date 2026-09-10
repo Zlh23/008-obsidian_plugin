@@ -14,7 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create or update release PR
+        id: release
         uses: googleapis/release-please-action@v5
         with:
           release-type: node
           target-branch: main
+
+      - name: Upload Obsidian plugin files
+        if: ${{ steps.release.outputs.release_created }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag_name }}
+          files: |
+            main.js
+            manifest.json
+            styles.css
