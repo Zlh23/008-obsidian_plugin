@@ -1,0 +1,7 @@
+{
+  "displayName": "树状显示",
+  "roots": [],
+  "scan": { "entryFile": "same-name", "children": "directories-and-files", "parentLinks": "wikilinks-or-relative-paths" },
+  "interaction": { "openOnClick": true, "expandOnFirstClick": true, "contextMenuCollapse": true, "focusSync": true },
+  "layout": { "defaultOrientation": "horizontal", "fitToViewport": true }
+}

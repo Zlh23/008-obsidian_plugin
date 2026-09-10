@@ -1,0 +1,135 @@
+.usbip-tree-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.usbip-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.usbip-legend-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+.usbip-tree-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+.usbip-tree-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+.usbip-edge {
+  fill: none;
+  stroke: var(--background-modifier-border);
+  stroke-width: 2;
+}
+.usbip-node {
+  cursor: pointer;
+}
+.usbip-shape {
+  stroke: var(--background-primary);
+  stroke-width: 3;
+}
+.usbip-node:hover .usbip-shape {
+  stroke: var(--interactive-accent);
+  stroke-width: 5;
+}
+.usbip-node.is-selected .usbip-shape {
+  stroke: var(--interactive-accent);
+  stroke-width: 8;
+  filter: drop-shadow(0 0 5px var(--interactive-accent));
+}
+.usbip-node.is-focus-ancestor .usbip-shape {
+  stroke: rgba(var(--interactive-accent-rgb), 0.62);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 3px rgba(var(--interactive-accent-rgb), 0.25));
+}
+.usbip-node.is-unrelated,
+.usbip-edge.is-unrelated {
+  opacity: 0.3;
+}
+.usbip-node-label {
+  fill: var(--text-normal);
+  font-size: 15px;
+}
+.usbip-node-progress {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.usbip-error {
+  margin: 1rem;
+  padding: 1rem;
+  color: var(--text-error);
+  background: var(--background-modifier-error);
+  border-radius: 0.5rem;
+}
+.usbip-empty {
+  margin: 1rem;
+  padding: 1rem;
+  color: var(--text-muted);
+}
+.usbip-task-cell {
+  width: 3.25rem;
+  min-width: 3.25rem;
+  text-align: center;
+  white-space: nowrap;
+}
+.usbip-task-checkbox {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  vertical-align: -0.15rem;
+  cursor: pointer;
+}
+.usbip-task-checkbox:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.callout[data-callout="usb-method"] {
+  --callout-color: 52, 183, 89;
+  --callout-icon: code-2;
+  margin: 0.8rem 0;
+  border: 1px solid rgba(var(--callout-color), 0.55);
+  border-left: 4px solid rgb(var(--callout-color));
+  border-radius: 0.65rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.callout[data-callout="usb-method"] > .callout-title {
+  padding: 0.75rem 1rem;
+}
+.callout[data-callout="usb-method"] > .callout-content {
+  padding: 0.2rem 1rem 1rem;
+}
+.callout[data-callout="usb-method"] > .callout-title:hover {
+  background: rgba(var(--callout-color), 0.08);
+}
+.callout[data-callout="usb-method"] .callout-title-inner {
+  line-height: 1.35;
+}
+.callout[data-callout="usb-method"] .callout-title-inner small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+.usbip-error {
+  display: block !important;
+  color: #ff3333 !important;
+  background: #fff0f0 !important;
+  white-space: pre-wrap !important;
+  font-family: monospace !important;
+  z-index: 10;
+}

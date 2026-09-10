@@ -1,0 +1,12 @@
+{
+  "name": "tree-view",
+  "private": true,
+  "scripts": {
+    "check": "node --check main.js",
+    "format": "prettier --write main.js styles.css",
+    "build": "npm run check"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
