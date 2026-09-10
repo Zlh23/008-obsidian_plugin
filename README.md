@@ -73,14 +73,11 @@ my-project/
 
 ## 自动发布
 
-仓库已包含 GitHub Actions 工作流。推送到 `main` 后，Release Please 会自动创建或更新版本 PR；合并该 PR 后会自动创建 Git Tag 和 GitHub Release。
-
-工作流使用支持 Node.js 24 的 Release Please Action，避免 GitHub Actions 的 Node.js 20 弃用警告。
+仓库已包含 GitHub Actions 工作流。推送到 `main` 后，工作流读取 `manifest.json` 的版本号，发现对应 Tag 不存在时直接创建 GitHub Release，并上传 `main.js`、`manifest.json` 和 `styles.css`。不需要手动合并 PR。
 
 首次启用时：
 
 1. 将工作流文件提交并推送到 `main`。
 2. 在 GitHub 的 Actions 页面确认工作流成功运行。
-3. 合并自动生成的版本 PR。
 
-之后只需正常提交代码并合并版本 PR。发布版本必须与 `manifest.json` 的版本号保持一致。
+之后只需修改 `manifest.json` 的 `version`，提交并推送到 `main`。发布版本必须与该版本号保持一致。
