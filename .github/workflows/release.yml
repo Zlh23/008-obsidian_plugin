@@ -16,6 +16,9 @@ jobs:
       - id: existing
         run: |
           if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Bundle plugin entry for release
+        if: ${{ steps.existing.outputs.exists == 'false' }}
+        run: npx --yes esbuild src/plugin.js --bundle --platform=node --external:obsidian --format=cjs --outfile=main.js
       - if: ${{ steps.existing.outputs.exists == 'false' }}
         uses: softprops/action-gh-release@v2
         with:

@@ -71,6 +71,19 @@ my-project/
 <Vault>/.obsidian/plugins/tree-view/
 ```
 
+### 使用 Git clone（开发模式）
+
+如果需要直接跟踪仓库源码，可以把仓库克隆到 Vault 的插件目录：
+
+```bash
+git clone https://github.com/Zlh23/008-obsidian_plugin.git \
+  "<Vault>/.obsidian/plugins/tree-view"
+```
+
+更新代码时进入该目录执行 `git pull`，然后在 Obsidian 中重新加载插件。Git clone 适合开发和调试；它不会自动构建，也不会自动发布 Release。若入口代码发生变化，请先运行项目的构建检查，再重新加载插件。
+
+BRAT 则使用 GitHub Release 中的 `main.js`、`manifest.json` 和 `styles.css`，适合普通安装和自动更新。两种方式不要同时安装同一个插件目录。
+
 ## 自动发布
 
 仓库已包含 GitHub Actions 工作流。推送到 `main` 后，工作流读取 `manifest.json` 的版本号，发现对应 Tag 不存在时直接创建 GitHub Release，并上传 `main.js`、`manifest.json` 和 `styles.css`。不需要手动合并 PR。
