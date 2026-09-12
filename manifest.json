@@ -1,7 +1,7 @@
 {
   "id": "tree-view",
   "name": "Controlled Mermaid",
-  "version": "5.2.1",
+  "version": "5.2.2",
   "minAppVersion": "1.5.0",
   "description": "渲染 controlled-mermaid，并支持相对当前文档的可点击链接与 Hover。",
   "author": "本地项目",

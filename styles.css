@@ -138,6 +138,39 @@
   cursor: pointer;
 }
 
+.controlled-mermaid-block .obsidian-mermaid-interface {
+  cursor: pointer;
+  font-weight: 700 !important;
+  transition: filter 120ms ease, opacity 120ms ease;
+}
+
+.controlled-mermaid-block .obsidian-mermaid-interface:hover,
+.controlled-mermaid-block .obsidian-mermaid-interface:focus {
+  filter: brightness(1.3) drop-shadow(0 0 4px currentColor);
+  text-decoration: underline;
+  outline: none;
+}
+
+.controlled-mermaid-block .obsidian-mermaid-domain-interface > rect,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface > polygon,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface > path,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface > circle,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface > ellipse,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface > .label-container {
+  fill: transparent !important;
+  stroke: var(--domain-color) !important;
+  stroke-width: 2.5px !important;
+}
+
+.controlled-mermaid-block .obsidian-mermaid-domain-interface .nodeLabel,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface text,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface span,
+.controlled-mermaid-block .obsidian-mermaid-domain-interface p {
+  color: var(--domain-color) !important;
+  fill: var(--domain-color) !important;
+  font-weight: 700;
+}
+
 .controlled-mermaid-block .obsidian-mermaid-domain > rect,
 .controlled-mermaid-block .obsidian-mermaid-module > rect,
 .controlled-mermaid-block .obsidian-mermaid-module > polygon,
