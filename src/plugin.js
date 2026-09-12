@@ -192,8 +192,11 @@ class TreeDisplayPlugin extends Plugin {
     for (const link of links) {
       const group = groups.find((candidate) => {
         const id = candidate.getAttribute("id") || "";
-        if (link.target === "domain") return candidate.classList.contains("cluster") && (id === link.id || id.includes(link.id));
-        return candidate.classList.contains("node") && (id === link.id || id.startsWith(`flowchart-${link.id}-`) || candidate.getAttribute("data-id") === link.id);
+        const matchesNode = candidate.classList.contains("node") &&
+          (id === link.id || id.startsWith(`flowchart-${link.id}-`) || candidate.getAttribute("data-id") === link.id);
+        if (matchesNode) return true;
+        return link.target === "domain" && candidate.classList.contains("cluster") &&
+          (id === link.id || id.includes(link.id));
       });
       if (!group) continue;
       group.dataset.obsidianLink = link.path;
@@ -278,9 +281,10 @@ class TreeDisplayPlugin extends Plugin {
   isNavigationLeaf(leaf, target) {
     if (leaf.containerEl?.dataset.treeViewNavigationTarget === target) return true;
     const filePath = leaf.view?.file?.path || "";
-    const match = filePath.match(/^my-skills\/项目开发流程\/([^/]+)\/([^/]+)\.md$/);
+    const match = filePath.match(/^my-skills\/项目开发流程\/(.+)\.md$/);
     if (!match) return false;
-    const isDomainEntry = match[1] === match[2];
+    const relativeParts = match[1].split('/');
+    const isDomainEntry = relativeParts.length === 2 && relativeParts[1] === 'SKILL';
     return target === "domain" ? isDomainEntry : !isDomainEntry;
   }
   onunload() {

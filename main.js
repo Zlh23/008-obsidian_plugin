@@ -159650,8 +159650,9 @@ ${details}` });
     for (const link of links3) {
       const group2 = groups.find((candidate) => {
         const id28 = candidate.getAttribute("id") || "";
-        if (link.target === "domain") return candidate.classList.contains("cluster") && (id28 === link.id || id28.includes(link.id));
-        return candidate.classList.contains("node") && (id28 === link.id || id28.startsWith(`flowchart-${link.id}-`) || candidate.getAttribute("data-id") === link.id);
+        const matchesNode = candidate.classList.contains("node") && (id28 === link.id || id28.startsWith(`flowchart-${link.id}-`) || candidate.getAttribute("data-id") === link.id);
+        if (matchesNode) return true;
+        return link.target === "domain" && candidate.classList.contains("cluster") && (id28 === link.id || id28.includes(link.id));
       });
       if (!group2) continue;
       group2.dataset.obsidianLink = link.path;
@@ -159739,9 +159740,10 @@ ${details}` });
   isNavigationLeaf(leaf, target) {
     if (leaf.containerEl?.dataset.treeViewNavigationTarget === target) return true;
     const filePath = leaf.view?.file?.path || "";
-    const match2 = filePath.match(/^my-skills\/项目开发流程\/([^/]+)\/([^/]+)\.md$/);
+    const match2 = filePath.match(/^my-skills\/项目开发流程\/(.+)\.md$/);
     if (!match2) return false;
-    const isDomainEntry = match2[1] === match2[2];
+    const relativeParts = match2[1].split("/");
+    const isDomainEntry = relativeParts.length === 2 && relativeParts[1] === "SKILL";
     return target === "domain" ? isDomainEntry : !isDomainEntry;
   }
   onunload() {
