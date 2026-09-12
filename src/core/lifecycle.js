@@ -1,13 +1,7 @@
-const { Notice } = require('obsidian');
+const { Notice, normalizePath } = require('obsidian');
 
-async function openTree(app, viewType) {
-  let leaf = app.workspace.getLeavesOfType(viewType)[0];
-  if (!leaf) { leaf = app.workspace.getLeaf(true); await leaf.setViewState({ type: viewType, active: true }); }
-  app.workspace.revealLeaf(leaf);
-}
-
-async function openFile(app, path, sourceLeaf) {
-  const file = resolveFile(app, path);
+async function openFile(app, path, sourceLeaf, sourcePath) {
+  const file = resolveFile(app, path, sourcePath);
   if (!file) return new Notice(`文件不存在：${String(path).trim()}`);
   let target = app.workspace.getLeavesOfType('markdown').find((leaf) => leaf !== sourceLeaf);
   if (!target) target = app.workspace.getLeaf('split', 'vertical');
@@ -15,28 +9,22 @@ async function openFile(app, path, sourceLeaf) {
   app.workspace.revealLeaf(target);
 }
 
-function resolveFile(app, path) {
-  const clean = String(path).trim().replace(/^\[\[|\]\]$/g, '').split('|')[0].replace(/^\//, '');
-  const candidates = [clean, clean.endsWith('.md') ? clean : `${clean}.md`];
-  if (clean.startsWith('my-skills/')) {
-    const short = clean.slice('my-skills/'.length);
-    candidates.push(short, short.endsWith('.md') ? short : `${short}.md`);
+function resolveFile(app, path, sourcePath) {
+  const clean = String(path).trim().replace(/^\[\[|\]\]$/g, '').split('|')[0].split('#')[0];
+  const sourceDirectory = String(sourcePath || '').replace(/\/[^/]*$/, '');
+  const relative = sourceDirectory ? normalizePath(`${sourceDirectory}/${clean}`) : normalizePath(clean);
+  const rootRelative = normalizePath(clean.replace(/^\//, ''));
+  const candidates = [relative, relative.endsWith('.md') ? relative : `${relative}.md`];
+  if (rootRelative !== relative) {
+    candidates.push(rootRelative, rootRelative.endsWith('.md') ? rootRelative : `${rootRelative}.md`);
   }
   return candidates.map((candidate) => app.vault.getAbstractFileByPath(candidate)).find(Boolean);
 }
 
-async function openFileInLeaf(app, path, target) {
-  const file = resolveFile(app, path);
+async function openFileInLeaf(app, path, target, sourcePath) {
+  const file = resolveFile(app, path, sourcePath);
   if (!file) return new Notice(`文件不存在：${String(path).trim()}`);
   await target.openFile(file);
   app.workspace.revealLeaf(target);
 }
-
-
-class RefreshManager {
-  constructor(plugin, viewType) { this.plugin = plugin; this.viewType = viewType; this.timer = null; this.running = false; this.again = false; this.notice = false; }
-  request({ immediate = false, notice = false } = {}) { this.notice ||= notice; clearTimeout(this.timer); if (immediate) return this.flush(); this.timer = setTimeout(() => this.flush(), 180); }
-  async flush() { if (this.running) { this.again = true; return; } this.running = true; try { do { this.again = false; for (const leaf of this.plugin.app.workspace.getLeavesOfType(this.viewType)) await leaf.view.render(); } while (this.again); } finally { this.notice = false; this.running = false; } }
-}
-
-module.exports = { openTree, openFile, openFileInLeaf, RefreshManager };
+module.exports = { openFile, openFileInLeaf, resolveFile };

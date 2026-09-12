@@ -143,12 +143,12 @@ class TreeDisplayPlugin extends Plugin {
       group.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        void this.openInNavigationLeaf(link.path, link.target);
+        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
       });
       group.addEventListener("keydown", (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        void this.openInNavigationLeaf(link.path, link.target);
+        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
       });
     }
   }
@@ -199,7 +199,7 @@ class TreeDisplayPlugin extends Plugin {
       }
     });
   }
-  async openInNavigationLeaf(path, target) {
+  async openInNavigationLeaf(path, target, sourcePath) {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     let leaf = this.navigationLeaves[target];
     if (!leaf || !markdownLeaves.includes(leaf)) {
@@ -213,7 +213,7 @@ class TreeDisplayPlugin extends Plugin {
     }
     this.navigationLeaves[target] = leaf;
     if (leaf.containerEl) leaf.containerEl.dataset.treeViewNavigationTarget = target;
-    return navigation.openFileInLeaf(this.app, path, leaf);
+    return navigation.openFileInLeaf(this.app, path, leaf, sourcePath);
   }
   onunload() {
     this.navigationLeaves = { domain: null, module: null };
@@ -246,7 +246,7 @@ class TreeDisplayPlugin extends Plugin {
         node.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          this.open(path, this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.leaf);
+          this.open(path, this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.leaf, sourcePath);
         });
       }
     }
@@ -275,7 +275,7 @@ class TreeDisplayPlugin extends Plugin {
     if (!preview) {
       event.preventDefault();
       event.stopPropagation();
-      await this.open(path, active?.leaf);
+      await this.open(path, active?.leaf, sourcePath);
     }
   }
   handleMermaidHover(event) {
@@ -355,11 +355,8 @@ class TreeDisplayPlugin extends Plugin {
       box.disabled = false;
     }
   }
-  async openTree() {
-    return navigation.openTree(this.app, VIEW);
-  }
-  async open(path, sourceLeaf) {
-    return navigation.openFile(this.app, path, sourceLeaf);
+  async open(path, sourceLeaf, sourcePath) {
+    return navigation.openFile(this.app, path, sourceLeaf, sourcePath);
   }
 }
 module.exports = TreeDisplayPlugin;

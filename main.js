@@ -158701,71 +158701,33 @@ ${config5.themeCSS}`;
 // src/core/lifecycle.js
 var require_lifecycle = __commonJS({
   "src/core/lifecycle.js"(exports2, module2) {
-    var { Notice } = require("obsidian");
-    async function openTree(app, viewType) {
-      let leaf = app.workspace.getLeavesOfType(viewType)[0];
-      if (!leaf) {
-        leaf = app.workspace.getLeaf(true);
-        await leaf.setViewState({ type: viewType, active: true });
-      }
-      app.workspace.revealLeaf(leaf);
-    }
-    async function openFile(app, path3, sourceLeaf) {
-      const file = resolveFile(app, path3);
+    var { Notice, normalizePath } = require("obsidian");
+    async function openFile(app, path3, sourceLeaf, sourcePath) {
+      const file = resolveFile(app, path3, sourcePath);
       if (!file) return new Notice(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
       let target = app.workspace.getLeavesOfType("markdown").find((leaf) => leaf !== sourceLeaf);
       if (!target) target = app.workspace.getLeaf("split", "vertical");
       await target.openFile(file);
       app.workspace.revealLeaf(target);
     }
-    function resolveFile(app, path3) {
-      const clean = String(path3).trim().replace(/^\[\[|\]\]$/g, "").split("|")[0].replace(/^\//, "");
-      const candidates = [clean, clean.endsWith(".md") ? clean : `${clean}.md`];
-      if (clean.startsWith("my-skills/")) {
-        const short = clean.slice("my-skills/".length);
-        candidates.push(short, short.endsWith(".md") ? short : `${short}.md`);
+    function resolveFile(app, path3, sourcePath) {
+      const clean = String(path3).trim().replace(/^\[\[|\]\]$/g, "").split("|")[0].split("#")[0];
+      const sourceDirectory = String(sourcePath || "").replace(/\/[^/]*$/, "");
+      const relative = sourceDirectory ? normalizePath(`${sourceDirectory}/${clean}`) : normalizePath(clean);
+      const rootRelative = normalizePath(clean.replace(/^\//, ""));
+      const candidates = [relative, relative.endsWith(".md") ? relative : `${relative}.md`];
+      if (rootRelative !== relative) {
+        candidates.push(rootRelative, rootRelative.endsWith(".md") ? rootRelative : `${rootRelative}.md`);
       }
       return candidates.map((candidate) => app.vault.getAbstractFileByPath(candidate)).find(Boolean);
     }
-    async function openFileInLeaf(app, path3, target) {
-      const file = resolveFile(app, path3);
+    async function openFileInLeaf(app, path3, target, sourcePath) {
+      const file = resolveFile(app, path3, sourcePath);
       if (!file) return new Notice(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
       await target.openFile(file);
       app.workspace.revealLeaf(target);
     }
-    var RefreshManager = class {
-      constructor(plugin22, viewType) {
-        this.plugin = plugin22;
-        this.viewType = viewType;
-        this.timer = null;
-        this.running = false;
-        this.again = false;
-        this.notice = false;
-      }
-      request({ immediate = false, notice = false } = {}) {
-        this.notice ||= notice;
-        clearTimeout(this.timer);
-        if (immediate) return this.flush();
-        this.timer = setTimeout(() => this.flush(), 180);
-      }
-      async flush() {
-        if (this.running) {
-          this.again = true;
-          return;
-        }
-        this.running = true;
-        try {
-          do {
-            this.again = false;
-            for (const leaf of this.plugin.app.workspace.getLeavesOfType(this.viewType)) await leaf.view.render();
-          } while (this.again);
-        } finally {
-          this.notice = false;
-          this.running = false;
-        }
-      }
-    };
-    module2.exports = { openTree, openFile, openFileInLeaf, RefreshManager };
+    module2.exports = { openFile, openFileInLeaf, resolveFile };
   }
 });
 
@@ -158918,12 +158880,12 @@ ${details}` });
       group2.addEventListener("click", (event3) => {
         event3.preventDefault();
         event3.stopPropagation();
-        void this.openInNavigationLeaf(link.path, link.target);
+        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
       });
       group2.addEventListener("keydown", (event3) => {
         if (event3.key !== "Enter" && event3.key !== " ") return;
         event3.preventDefault();
-        void this.openInNavigationLeaf(link.path, link.target);
+        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
       });
     }
   }
@@ -158977,7 +158939,7 @@ ${details}` });
       }
     });
   }
-  async openInNavigationLeaf(path3, target) {
+  async openInNavigationLeaf(path3, target, sourcePath) {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     let leaf = this.navigationLeaves[target];
     if (!leaf || !markdownLeaves.includes(leaf)) {
@@ -158991,7 +158953,7 @@ ${details}` });
     }
     this.navigationLeaves[target] = leaf;
     if (leaf.containerEl) leaf.containerEl.dataset.treeViewNavigationTarget = target;
-    return navigation.openFileInLeaf(this.app, path3, leaf);
+    return navigation.openFileInLeaf(this.app, path3, leaf, sourcePath);
   }
   onunload() {
     this.navigationLeaves = { domain: null, module: null };
@@ -159024,7 +158986,7 @@ ${details}` });
         node2.addEventListener("click", (event3) => {
           event3.preventDefault();
           event3.stopPropagation();
-          this.open(path3, this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.leaf);
+          this.open(path3, this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.leaf, sourcePath);
         });
       }
     }
@@ -159060,7 +159022,7 @@ ${details}` });
     if (!preview) {
       event3.preventDefault();
       event3.stopPropagation();
-      await this.open(path3, active?.leaf);
+      await this.open(path3, active?.leaf, sourcePath);
     }
   }
   handleMermaidHover(event3) {
@@ -159166,11 +159128,8 @@ ${details}` });
       box.disabled = false;
     }
   }
-  async openTree() {
-    return navigation.openTree(this.app, VIEW);
-  }
-  async open(path3, sourceLeaf) {
-    return navigation.openFile(this.app, path3, sourceLeaf);
+  async open(path3, sourceLeaf, sourcePath) {
+    return navigation.openFile(this.app, path3, sourceLeaf, sourcePath);
   }
 };
 module.exports = TreeDisplayPlugin;

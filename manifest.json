@@ -1,9 +1,9 @@
 {
   "id": "tree-view",
-  "name": "树状显示",
+  "name": "Controlled Mermaid",
   "version": "5.2.1",
   "minAppVersion": "1.5.0",
-  "description": "按配置扫描 Markdown 目录并显示为可交互树状图。",
+  "description": "渲染 controlled-mermaid，并支持相对当前文档的可点击链接与 Hover。",
   "author": "本地项目",
   "isDesktopOnly": true
   ,"styles": "styles.css"
