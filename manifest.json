@@ -5,5 +5,6 @@
   "minAppVersion": "1.5.0",
   "description": "按配置扫描 Markdown 目录并显示为可交互树状图。",
   "author": "本地项目",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
+  ,"styles": "styles.css"
 }

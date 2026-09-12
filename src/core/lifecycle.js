@@ -7,10 +7,27 @@ async function openTree(app, viewType) {
 }
 
 async function openFile(app, path, sourceLeaf) {
-  const file = app.vault.getAbstractFileByPath(path);
-  if (!file) return new Notice(`文件不存在：${path}`);
+  const file = resolveFile(app, path);
+  if (!file) return new Notice(`文件不存在：${String(path).trim()}`);
   let target = app.workspace.getLeavesOfType('markdown').find((leaf) => leaf !== sourceLeaf);
   if (!target) target = app.workspace.getLeaf('split', 'vertical');
+  await target.openFile(file);
+  app.workspace.revealLeaf(target);
+}
+
+function resolveFile(app, path) {
+  const clean = String(path).trim().replace(/^\[\[|\]\]$/g, '').split('|')[0].replace(/^\//, '');
+  const candidates = [clean, clean.endsWith('.md') ? clean : `${clean}.md`];
+  if (clean.startsWith('my-skills/')) {
+    const short = clean.slice('my-skills/'.length);
+    candidates.push(short, short.endsWith('.md') ? short : `${short}.md`);
+  }
+  return candidates.map((candidate) => app.vault.getAbstractFileByPath(candidate)).find(Boolean);
+}
+
+async function openFileInLeaf(app, path, target) {
+  const file = resolveFile(app, path);
+  if (!file) return new Notice(`文件不存在：${String(path).trim()}`);
   await target.openFile(file);
   app.workspace.revealLeaf(target);
 }
@@ -22,4 +39,4 @@ class RefreshManager {
   async flush() { if (this.running) { this.again = true; return; } this.running = true; try { do { this.again = false; for (const leaf of this.plugin.app.workspace.getLeavesOfType(this.viewType)) await leaf.view.render(); } while (this.again); } finally { this.notice = false; this.running = false; } }
 }
 
-module.exports = { openTree, openFile, RefreshManager };
+module.exports = { openTree, openFile, openFileInLeaf, RefreshManager };

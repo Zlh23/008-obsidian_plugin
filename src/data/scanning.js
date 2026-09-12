@@ -3,7 +3,7 @@ const { TFolder, TFile } = require('obsidian');
 class Scanner {
   constructor({ vault, metadataCache, config, title, fileState, methods, tasks }) { this.vault = vault; this.metadataCache = metadataCache; this.config = config; this.title = title; this.fileState = fileState; this.methods = methods; this.tasks = tasks; }
   ordered(folder, text) { return folder.children.filter((item) => item instanceof TFolder).sort((a, b) => a.name.localeCompare(b.name)); }
-  orderedModules(folder, text) { return folder.children.filter((item) => item instanceof TFile && item.extension === 'md' && item.basename !== folder.name && this.metadataCache.getFileCache(item)?.frontmatter?.type === 'module').sort((a, b) => a.name.localeCompare(b.name)); }
+  orderedModules(folder, text) { return folder.children.filter((item) => item instanceof TFile && item.extension === 'md' && item.basename !== folder.name).sort((a, b) => a.name.localeCompare(b.name)); }
   async rootSpecs() {
     const root = this.vault.getRoot(),
       specs = [],

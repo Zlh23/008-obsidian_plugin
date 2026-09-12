@@ -1,6 +1,6 @@
 const { ItemView } = require('obsidian');
 const VIEW = 'tree-view';
-class TreeView extends ItemView { constructor(leaf, plugin) { super(leaf); this.plugin = plugin; this.orientation = 'horizontal'; this.rootFilter = 'all'; this.selected = null; this.expanded = new Set(); this.renderToken = 0; } getViewType() { return VIEW; } getDisplayText() { return '树状显示'; } getIcon() { return 'git-fork'; } async onOpen() { await this.render(); } async render(motion = null) { return renderCycle(this, motion); } }
+class TreeView extends ItemView { constructor(leaf, plugin) { super(leaf); this.plugin = plugin; this.orientation = 'horizontal'; this.rootFilter = 'all'; this.selected = null; this.expanded = new Set(); this.renderToken = 0; } getViewType() { return VIEW; } getDisplayText() { return '树状显示'; } getIcon() { return 'git-fork'; } async onOpen() { await this.render(); } async render(motion = null) { return renderCycle(this, motion); } layout(nodes) { const config = this.plugin.config?.layout || {}; return layoutTree(nodes, { vertical: this.orientation === 'vertical', wrap: (label, limit) => this.wrap(label, limit), padding: config.padding ?? 58, rankGap: config.rankGap ?? 96 }); } }
 const LAYOUT_DEFAULTS = Object.freeze({ nodeWidth: 190, nodeHeight: 58, padding: 58, rankGap: 96 });
 
 function mergeLayout(overrides = {}) {
@@ -128,5 +128,11 @@ async function renderCycle(view, motion = null) {
 // TreeView 的实现文件由构建脚本从旧实现迁移而来。
 // 该模块只负责 Obsidian ItemView；数据扫描和 Markdown 编辑不应放在这里。
 Object.assign(TreeView.prototype, require('./graphics'));
-Object.assign(TreeView.prototype, require('./interaction'));
+const interaction = require('./interaction');
+Object.assign(
+  TreeView.prototype,
+  interaction.FocusController,
+  interaction.InteractionController,
+  interaction.TreeState,
+);
 module.exports = TreeView;
