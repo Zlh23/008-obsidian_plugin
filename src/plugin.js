@@ -1,19 +1,7 @@
-const { Plugin, Notice } = require('obsidian');
+const { Plugin } = require('obsidian');
 const mermaidModule = require('mermaid');
-const TreeView = require('./view/canvas');
-const { loadConfig } = require('./core/configuration');
-const parser = require('./markdown/parsing');
-const documents = require('./data/model');
-const { RefreshManager } = require('./core/lifecycle');
-const Scanner = require('./data/scanning');
 const navigation = require('./core/lifecycle');
-const tableEditor = require('./markdown/editing');
-const VIEW = 'tree-view';
 class TreeDisplayPlugin extends Plugin {
-  async loadConfig() {
-    /* configuration is owned by core/config.js */
-    this.config = await loadConfig(this.app.vault);
-  }
   async onload() {
     const renderer = mermaidModule.default || mermaidModule;
     if (typeof renderer.initialize !== "function" || typeof renderer.render !== "function") {
@@ -87,65 +75,12 @@ class TreeDisplayPlugin extends Plugin {
         el.createEl("pre", { text: `Mermaid 渲染失败\n${details}` });
       }
     });
-    await this.loadConfig();
     this.registerDomEvent(document, "click", (event) => this.handleMermaidClick(event), true);
     this.registerDomEvent(document, "mouseover", (event) => this.handleMermaidHover(event), true);
     this.lastPointer = null;
     this.registerDomEvent(document, "mousemove", (event) => { this.lastPointer = { x: event.clientX, y: event.clientY }; }, true);
     this.registerInterval(window.setInterval(() => this.clearStaleMermaidHover(), 100));
     this.registerEvent(this.app.workspace.on("window-open", (_workspaceWindow, popoutWindow) => this.bindMermaidWindow(popoutWindow)));
-    this.refreshing = false;
-    this.refreshAgain = false;
-    this.refreshNotice = false;
-    this.refreshManager = new RefreshManager(this, VIEW);
-    this.scanner = new Scanner({
-      vault: this.app.vault,
-      metadataCache: this.app.metadataCache,
-      config: this.config,
-      title: this.title.bind(this),
-      fileState: this.fileState.bind(this),
-      methods: this.methods.bind(this),
-      tasks: this.tasks.bind(this),
-    });
-    this.registerView(VIEW, (leaf) => new TreeView(leaf, this));
-    this.registerMarkdownPostProcessor((el, ctx) =>
-      this.enhanceTaskTables(el, ctx),
-    );
-    this.registerMarkdownPostProcessor((el, ctx) =>
-      this.enhanceMermaidLinks(el, ctx),
-    );
-    this.registerEvent(
-      this.app.workspace.on("file-open", (file) => this.syncFocus(file)),
-    );
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", (leaf) =>
-        this.syncFocus(leaf?.view?.file),
-      ),
-    );
-    this.registerEvent(
-      this.app.vault.on("modify", (f) => {
-        if (f.path.endsWith(".md")) this.requestRefresh();
-      }),
-    );
-    this.registerEvent(
-      this.app.vault.on("create", () => this.requestRefresh()),
-    );
-    this.registerEvent(
-      this.app.vault.on("delete", () => this.requestRefresh()),
-    );
-    this.registerEvent(
-      this.app.vault.on("rename", () => this.requestRefresh()),
-    );
-    this.addCommand({
-      id: "open-usbip-tree",
-      name: "打开树状显示",
-      callback: () => this.openTree(),
-    });
-    this.addCommand({
-      id: "refresh-usbip-status",
-      name: "刷新树状显示",
-      callback: () => this.requestRefresh({ immediate: true, notice: true }),
-    });
   }
   configureControlledMermaid(dark, targetWidth) {
     // Keep Mermaid's TD direction as the primary layout constraint. Dagre
@@ -268,7 +203,9 @@ class TreeDisplayPlugin extends Plugin {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     let leaf = this.navigationLeaves[target];
     if (!leaf || !markdownLeaves.includes(leaf)) {
-      leaf = markdownLeaves.find((candidate) => this.isNavigationLeaf(candidate, target));
+      leaf = markdownLeaves.find((candidate) =>
+        candidate.containerEl?.dataset.treeViewNavigationTarget === target,
+      );
     }
     if (!leaf) {
       leaf = this.app.workspace.getLeaf("split", "vertical");
@@ -278,64 +215,9 @@ class TreeDisplayPlugin extends Plugin {
     if (leaf.containerEl) leaf.containerEl.dataset.treeViewNavigationTarget = target;
     return navigation.openFileInLeaf(this.app, path, leaf);
   }
-  isNavigationLeaf(leaf, target) {
-    if (leaf.containerEl?.dataset.treeViewNavigationTarget === target) return true;
-    const filePath = leaf.view?.file?.path || "";
-    const match = filePath.match(/^my-skills\/项目开发流程\/(.+)\.md$/);
-    if (!match) return false;
-    const relativeParts = match[1].split('/');
-    const isDomainEntry = relativeParts.length === 2 && relativeParts[1] === 'SKILL';
-    return target === "domain" ? isDomainEntry : !isDomainEntry;
-  }
   onunload() {
-    window.clearTimeout(this.refreshTimer);
+    this.navigationLeaves = { domain: null, module: null };
   }
-  requestRefresh({ immediate = false, notice = false } = {}) {
-    return this.refreshManager.request({ immediate, notice });
-    this.refreshNotice = this.refreshNotice || notice;
-    window.clearTimeout(this.refreshTimer);
-    if (immediate) return this.flushRefresh();
-    this.refreshTimer = window.setTimeout(() => this.flushRefresh(), 180);
-  }
-  async flushRefresh() {
-    return this.refreshManager.flush();
-    if (this.refreshing) {
-      this.refreshAgain = true;
-      return;
-    }
-    this.refreshing = true;
-    try {
-      do {
-        this.refreshAgain = false;
-        for (const leaf of this.app.workspace.getLeavesOfType(VIEW))
-          await leaf.view.render();
-      } while (this.refreshAgain);
-      if (this.refreshNotice) new Notice("USB透传层级图已刷新");
-    } finally {
-      this.refreshNotice = false;
-      this.refreshing = false;
-    }
-  }
-  async syncFocus(file) {
-    if (!file?.path) return;
-    for (const leaf of this.app.workspace.getLeavesOfType(VIEW))
-      await leaf.view.focusPath(file.path);
-  }
-  tasks(text) {
-    return parser.tasks(text);
-  }
-  methods(text) {
-    return parser.methods(text);
-  }
-  async title(file, fallback) {
-    return documents.title(this.app.vault, file, fallback);
-  }
-  async fileState(file) {
-    return documents.state(this.app.vault, this.app.metadataCache, file, this.tasks.bind(this));
-  }
-  async rootSpecs() { return this.scanner.rootSpecs(); }
-  async nodes() { return this.scanner.nodes(); }
-  async enhanceTaskTables(el, ctx) { return tableEditor.enhanceTaskTables(this, el, ctx); }
   async enhanceMermaidLinks(el, ctx) {
     const sourcePath = ctx?.sourcePath;
     if (!sourcePath) return;

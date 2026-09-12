@@ -3431,39 +3431,39 @@ function mathmlBuilder$8(group2, options2) {
   }
   return node2;
 }
-function cdArrow(arrowChar, labels, parser25) {
+function cdArrow(arrowChar, labels, parser24) {
   var funcName = cdArrowFunctionName[arrowChar];
   switch (funcName) {
     case "\\\\cdrightarrow":
     case "\\\\cdleftarrow":
-      return parser25.callFunction(funcName, [labels[0]], [labels[1]]);
+      return parser24.callFunction(funcName, [labels[0]], [labels[1]]);
     case "\\uparrow":
     case "\\downarrow": {
-      var leftLabel = parser25.callFunction("\\\\cdleft", [labels[0]], []);
+      var leftLabel = parser24.callFunction("\\\\cdleft", [labels[0]], []);
       var bareArrow = {
         type: "atom",
         text: funcName,
         mode: "math",
         family: "rel"
       };
-      var sizedArrow = parser25.callFunction("\\Big", [bareArrow], []);
-      var rightLabel = parser25.callFunction("\\\\cdright", [labels[1]], []);
+      var sizedArrow = parser24.callFunction("\\Big", [bareArrow], []);
+      var rightLabel = parser24.callFunction("\\\\cdright", [labels[1]], []);
       var arrowGroup = {
         type: "ordgroup",
         mode: "math",
         body: [leftLabel, sizedArrow, rightLabel]
       };
-      return parser25.callFunction("\\\\cdparent", [arrowGroup], []);
+      return parser24.callFunction("\\\\cdparent", [arrowGroup], []);
     }
     case "\\\\cdlongequal":
-      return parser25.callFunction("\\\\cdlongequal", [], []);
+      return parser24.callFunction("\\\\cdlongequal", [], []);
     case "\\Vert": {
       var arrow = {
         type: "textord",
         text: "\\Vert",
         mode: "math"
       };
-      return parser25.callFunction("\\Big", [arrow], []);
+      return parser24.callFunction("\\Big", [arrow], []);
     }
     default:
       return {
@@ -3473,25 +3473,25 @@ function cdArrow(arrowChar, labels, parser25) {
       };
   }
 }
-function parseCD(parser25) {
+function parseCD(parser24) {
   var parsedRows = [];
-  parser25.gullet.beginGroup();
-  parser25.gullet.macros.set("\\cr", "\\\\\\relax");
-  parser25.gullet.beginGroup();
+  parser24.gullet.beginGroup();
+  parser24.gullet.macros.set("\\cr", "\\\\\\relax");
+  parser24.gullet.beginGroup();
   while (true) {
-    parsedRows.push(parser25.parseExpression(false, "\\\\"));
-    parser25.gullet.endGroup();
-    parser25.gullet.beginGroup();
-    var next3 = parser25.fetch().text;
+    parsedRows.push(parser24.parseExpression(false, "\\\\"));
+    parser24.gullet.endGroup();
+    parser24.gullet.beginGroup();
+    var next3 = parser24.fetch().text;
     if (next3 === "&" || next3 === "\\\\") {
-      parser25.consume();
+      parser24.consume();
     } else if (next3 === "\\end") {
       if (parsedRows[parsedRows.length - 1].length === 0) {
         parsedRows.pop();
       }
       break;
     } else {
-      throw new ParseError("Expected \\\\ or \\cr or \\end", parser25.nextToken);
+      throw new ParseError("Expected \\\\ or \\cr or \\end", parser24.nextToken);
     }
   }
   var row = [];
@@ -3539,7 +3539,7 @@ function parseCD(parser25) {
         } else {
           throw new ParseError('Expected one of "<>AV=|." after @', rowNodes[j2]);
         }
-        var arrow = cdArrow(arrowChar, labels, parser25);
+        var arrow = cdArrow(arrowChar, labels, parser24);
         var wrappedArrow = {
           type: "styling",
           body: [arrow],
@@ -3560,8 +3560,8 @@ function parseCD(parser25) {
     row = [];
     body.push(row);
   }
-  parser25.gullet.endGroup();
-  parser25.gullet.endGroup();
+  parser24.gullet.endGroup();
+  parser24.gullet.endGroup();
   var cols = new Array(body[0].length).fill({
     type: "align",
     align: "c",
@@ -3629,20 +3629,20 @@ function defineEnvironment(_ref2) {
 function defineMacro(name, body) {
   _macros[name] = body;
 }
-function getHLines(parser25) {
+function getHLines(parser24) {
   var hlineInfo = [];
-  parser25.consumeSpaces();
-  var nxt = parser25.fetch().text;
+  parser24.consumeSpaces();
+  var nxt = parser24.fetch().text;
   if (nxt === "\\relax") {
-    parser25.consume();
-    parser25.consumeSpaces();
-    nxt = parser25.fetch().text;
+    parser24.consume();
+    parser24.consumeSpaces();
+    nxt = parser24.fetch().text;
   }
   while (nxt === "\\hline" || nxt === "\\hdashline") {
-    parser25.consume();
+    parser24.consume();
     hlineInfo.push(nxt === "\\hdashline");
-    parser25.consumeSpaces();
-    nxt = parser25.fetch().text;
+    parser24.consumeSpaces();
+    nxt = parser24.fetch().text;
   }
   return hlineInfo;
 }
@@ -3651,7 +3651,7 @@ function getAutoTag(name) {
     return !name.includes("*");
   }
 }
-function parseArray(parser25, _ref2, style3) {
+function parseArray(parser24, _ref2, style3) {
   var {
     hskipBeforeAndAfter,
     addJot,
@@ -3664,12 +3664,12 @@ function parseArray(parser25, _ref2, style3) {
     maxNumCols,
     leqno
   } = _ref2;
-  parser25.gullet.beginGroup();
+  parser24.gullet.beginGroup();
   if (!singleRow) {
-    parser25.gullet.macros.set("\\cr", "\\\\\\relax");
+    parser24.gullet.macros.set("\\cr", "\\\\\\relax");
   }
   if (!arraystretch) {
-    var stretch = parser25.gullet.expandMacroAsText("\\arraystretch");
+    var stretch = parser24.gullet.expandMacroAsText("\\arraystretch");
     if (stretch == null) {
       arraystretch = 1;
     } else {
@@ -3679,7 +3679,7 @@ function parseArray(parser25, _ref2, style3) {
       }
     }
   }
-  parser25.gullet.beginGroup();
+  parser24.gullet.beginGroup();
   var row = [];
   var body = [row];
   var rowGaps = [];
@@ -3687,50 +3687,50 @@ function parseArray(parser25, _ref2, style3) {
   var tags2 = autoTag != null ? [] : void 0;
   function beginRow() {
     if (autoTag) {
-      parser25.gullet.macros.set("\\@eqnsw", "1", true);
+      parser24.gullet.macros.set("\\@eqnsw", "1", true);
     }
   }
   function endRow() {
     if (tags2) {
-      if (parser25.gullet.macros.get("\\df@tag")) {
-        tags2.push(parser25.subparse([new Token("\\df@tag")]));
-        parser25.gullet.macros.set("\\df@tag", void 0, true);
+      if (parser24.gullet.macros.get("\\df@tag")) {
+        tags2.push(parser24.subparse([new Token("\\df@tag")]));
+        parser24.gullet.macros.set("\\df@tag", void 0, true);
       } else {
-        tags2.push(Boolean(autoTag) && parser25.gullet.macros.get("\\@eqnsw") === "1");
+        tags2.push(Boolean(autoTag) && parser24.gullet.macros.get("\\@eqnsw") === "1");
       }
     }
   }
   beginRow();
-  hLinesBeforeRow.push(getHLines(parser25));
+  hLinesBeforeRow.push(getHLines(parser24));
   while (true) {
-    var cellBody = parser25.parseExpression(false, singleRow ? "\\end" : "\\\\");
-    parser25.gullet.endGroup();
-    parser25.gullet.beginGroup();
+    var cellBody = parser24.parseExpression(false, singleRow ? "\\end" : "\\\\");
+    parser24.gullet.endGroup();
+    parser24.gullet.beginGroup();
     var cell = {
       type: "ordgroup",
-      mode: parser25.mode,
+      mode: parser24.mode,
       body: cellBody
     };
     if (style3) {
       cell = {
         type: "styling",
-        mode: parser25.mode,
+        mode: parser24.mode,
         style: style3,
         resetFont: true,
         body: [cell]
       };
     }
     row.push(cell);
-    var next3 = parser25.fetch().text;
+    var next3 = parser24.fetch().text;
     if (next3 === "&") {
       if (maxNumCols && row.length === maxNumCols) {
         if (singleRow || colSeparationType) {
-          throw new ParseError("Too many tab characters: &", parser25.nextToken);
+          throw new ParseError("Too many tab characters: &", parser24.nextToken);
         } else {
-          parser25.settings.reportNonstrict("textEnv", "Too few columns specified in the {array} column argument.");
+          parser24.settings.reportNonstrict("textEnv", "Too few columns specified in the {array} column argument.");
         }
       }
-      parser25.consume();
+      parser24.consume();
     } else if (next3 === "\\end") {
       endRow();
       if (row.length === 1 && cell.type === "styling" && cell.body.length === 1 && cell.body[0].type === "ordgroup" && cell.body[0].body.length === 0 && (body.length > 1 || !emptySingleRow)) {
@@ -3741,26 +3741,26 @@ function parseArray(parser25, _ref2, style3) {
       }
       break;
     } else if (next3 === "\\\\") {
-      parser25.consume();
+      parser24.consume();
       var size4 = void 0;
-      if (parser25.gullet.future().text !== " ") {
-        size4 = parser25.parseSizeGroup(true);
+      if (parser24.gullet.future().text !== " ") {
+        size4 = parser24.parseSizeGroup(true);
       }
       rowGaps.push(size4 ? size4.value : null);
       endRow();
-      hLinesBeforeRow.push(getHLines(parser25));
+      hLinesBeforeRow.push(getHLines(parser24));
       row = [];
       body.push(row);
       beginRow();
     } else {
-      throw new ParseError("Expected & or \\\\ or \\cr or \\end", parser25.nextToken);
+      throw new ParseError("Expected & or \\\\ or \\cr or \\end", parser24.nextToken);
     }
   }
-  parser25.gullet.endGroup();
-  parser25.gullet.endGroup();
+  parser24.gullet.endGroup();
+  parser24.gullet.endGroup();
   return {
     type: "array",
-    mode: parser25.mode,
+    mode: parser24.mode,
     addJot,
     arraystretch,
     body,
@@ -9671,13 +9671,13 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var base = args[0];
         return {
           type: "accentUnder",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           base
         };
@@ -9754,12 +9754,12 @@ var init_katex = __esm({
       },
       handler(_ref2, args, optArgs) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         return {
           type: "xArrow",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           body: args[0],
           below: optArgs[0]
@@ -9851,13 +9851,13 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var body = args[0];
         return {
           type: "mclass",
-          mode: parser25.mode,
+          mode: parser24.mode,
           mclass: "m" + funcName.slice(5),
           // TODO(kevinb): don't prefix with 'm'
           body: ordargument(body),
@@ -9883,11 +9883,11 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "mclass",
-          mode: parser25.mode,
+          mode: parser24.mode,
           mclass: binrelClass(args[0]),
           body: ordargument(args[1]),
           isCharacterBox: isCharacterBox(args[1])
@@ -9902,7 +9902,7 @@ var init_katex = __esm({
       },
       handler(_ref3, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref3;
         var baseArg = args[1];
@@ -9932,7 +9932,7 @@ var init_katex = __esm({
         };
         return {
           type: "mclass",
-          mode: parser25.mode,
+          mode: parser24.mode,
           mclass,
           body: [supsub],
           isCharacterBox: isCharacterBox(supsub)
@@ -9950,11 +9950,11 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "pmb",
-          mode: parser25.mode,
+          mode: parser24.mode,
           mclass: binrelClass(args[0]),
           body: ordargument(args[0])
         };
@@ -10004,12 +10004,12 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         return {
           type: "cdlabel",
-          mode: parser25.mode,
+          mode: parser24.mode,
           side: funcName.slice(4),
           label: args[0]
         };
@@ -10045,11 +10045,11 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "cdlabelparent",
-          mode: parser25.mode,
+          mode: parser24.mode,
           fragment: args[0]
         };
       },
@@ -10071,7 +10071,7 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var arg = assertNodeType(args[0], "ordgroup");
         var group2 = arg.body;
@@ -10094,7 +10094,7 @@ var init_katex = __esm({
         }
         return {
           type: "textord",
-          mode: parser25.mode,
+          mode: parser24.mode,
           text: text4
         };
       }
@@ -10119,13 +10119,13 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var color2 = assertNodeType(args[0], "color-token").color;
         var body = args[1];
         return {
           type: "color",
-          mode: parser25.mode,
+          mode: parser24.mode,
           color: color2,
           body: ordargument(body)
         };
@@ -10143,15 +10143,15 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           breakOnTokenText
         } = _ref2;
         var color2 = assertNodeType(args[0], "color-token").color;
-        parser25.gullet.macros.set("\\current@color", color2);
-        var body = parser25.parseExpression(true, breakOnTokenText);
+        parser24.gullet.macros.set("\\current@color", color2);
+        var body = parser24.parseExpression(true, breakOnTokenText);
         return {
           type: "color",
-          mode: parser25.mode,
+          mode: parser24.mode,
           color: color2,
           body
         };
@@ -10169,13 +10169,13 @@ var init_katex = __esm({
       },
       handler(_ref2, args, optArgs) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
-        var size4 = parser25.gullet.future().text === "[" ? parser25.parseSizeGroup(true) : null;
-        var newLine = !parser25.settings.displayMode || !parser25.settings.useStrictBehavior("newLineInDisplayMode", "In LaTeX, \\\\ or \\newline does nothing in display mode");
+        var size4 = parser24.gullet.future().text === "[" ? parser24.parseSizeGroup(true) : null;
+        var newLine = !parser24.settings.displayMode || !parser24.settings.useStrictBehavior("newLineInDisplayMode", "In LaTeX, \\\\ or \\newline does nothing in display mode");
         return {
           type: "cr",
-          mode: parser25.mode,
+          mode: parser24.mode,
           newLine,
           size: size4 && assertNodeType(size4, "size").value
         };
@@ -10221,28 +10221,28 @@ var init_katex = __esm({
       }
       return name;
     };
-    getRHS = (parser25) => {
-      var tok = parser25.gullet.popToken();
+    getRHS = (parser24) => {
+      var tok = parser24.gullet.popToken();
       if (tok.text === "=") {
-        tok = parser25.gullet.popToken();
+        tok = parser24.gullet.popToken();
         if (tok.text === " ") {
-          tok = parser25.gullet.popToken();
+          tok = parser24.gullet.popToken();
         }
       }
       return tok;
     };
-    letCommand = (parser25, name, tok, global2) => {
-      var macro = parser25.gullet.macros.get(tok.text);
+    letCommand = (parser24, name, tok, global2) => {
+      var macro = parser24.gullet.macros.get(tok.text);
       if (macro == null) {
         tok.noexpand = true;
         macro = {
           tokens: [tok],
           numArgs: 0,
           // reproduce the same behavior in expansion
-          unexpandable: !parser25.gullet.isExpandable(tok.text)
+          unexpandable: !parser24.gullet.isExpandable(tok.text)
         };
       }
-      parser25.gullet.macros.set(name, macro, global2);
+      parser24.gullet.macros.set(name, macro, global2);
     };
     defineFunction({
       type: "internal",
@@ -10258,16 +10258,16 @@ var init_katex = __esm({
       },
       handler(_ref2) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
-        parser25.consumeSpaces();
-        var token2 = parser25.fetch();
+        parser24.consumeSpaces();
+        var token2 = parser24.fetch();
         if (globalMap[token2.text]) {
           if (funcName === "\\global" || funcName === "\\\\globallong") {
             token2.text = globalMap[token2.text];
           }
-          return assertNodeType(parser25.parseFunction(), "internal");
+          return assertNodeType(parser24.parseFunction(), "internal");
         }
         throw new ParseError("Invalid token after macro prefix", token2);
       }
@@ -10282,10 +10282,10 @@ var init_katex = __esm({
       },
       handler(_ref2) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
-        var tok = parser25.gullet.popToken();
+        var tok = parser24.gullet.popToken();
         var name = tok.text;
         if (/^(?:[\\{}$&#^_]|EOF)$/.test(name)) {
           throw new ParseError("Expected a control sequence", tok);
@@ -10293,15 +10293,15 @@ var init_katex = __esm({
         var numArgs = 0;
         var insert;
         var delimiters2 = [[]];
-        while (parser25.gullet.future().text !== "{") {
-          tok = parser25.gullet.popToken();
+        while (parser24.gullet.future().text !== "{") {
+          tok = parser24.gullet.popToken();
           if (tok.text === "#") {
-            if (parser25.gullet.future().text === "{") {
-              insert = parser25.gullet.future();
+            if (parser24.gullet.future().text === "{") {
+              insert = parser24.gullet.future();
               delimiters2[numArgs].push("{");
               break;
             }
-            tok = parser25.gullet.popToken();
+            tok = parser24.gullet.popToken();
             if (!/^[1-9]$/.test(tok.text)) {
               throw new ParseError('Invalid argument number "' + tok.text + '"');
             }
@@ -10318,22 +10318,22 @@ var init_katex = __esm({
         }
         var {
           tokens: tokens2
-        } = parser25.gullet.consumeArg();
+        } = parser24.gullet.consumeArg();
         if (insert) {
           tokens2.unshift(insert);
         }
         if (funcName === "\\edef" || funcName === "\\xdef") {
-          tokens2 = parser25.gullet.expandTokens(tokens2);
+          tokens2 = parser24.gullet.expandTokens(tokens2);
           tokens2.reverse();
         }
-        parser25.gullet.macros.set(name, {
+        parser24.gullet.macros.set(name, {
           tokens: tokens2,
           numArgs,
           delimiters: delimiters2
         }, funcName === globalMap[funcName]);
         return {
           type: "internal",
-          mode: parser25.mode
+          mode: parser24.mode
         };
       }
     });
@@ -10351,16 +10351,16 @@ var init_katex = __esm({
       },
       handler(_ref3) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref3;
-        var name = checkControlSequence(parser25.gullet.popToken());
-        parser25.gullet.consumeSpaces();
-        var tok = getRHS(parser25);
-        letCommand(parser25, name, tok, funcName === "\\\\globallet");
+        var name = checkControlSequence(parser24.gullet.popToken());
+        parser24.gullet.consumeSpaces();
+        var tok = getRHS(parser24);
+        letCommand(parser24, name, tok, funcName === "\\\\globallet");
         return {
           type: "internal",
-          mode: parser25.mode
+          mode: parser24.mode
         };
       }
     });
@@ -10378,18 +10378,18 @@ var init_katex = __esm({
       },
       handler(_ref4) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref4;
-        var name = checkControlSequence(parser25.gullet.popToken());
-        var middle = parser25.gullet.popToken();
-        var tok = parser25.gullet.popToken();
-        letCommand(parser25, name, tok, funcName === "\\\\globalfuture");
-        parser25.gullet.pushToken(tok);
-        parser25.gullet.pushToken(middle);
+        var name = checkControlSequence(parser24.gullet.popToken());
+        var middle = parser24.gullet.popToken();
+        var tok = parser24.gullet.popToken();
+        letCommand(parser24, name, tok, funcName === "\\\\globalfuture");
+        parser24.gullet.pushToken(tok);
+        parser24.gullet.pushToken(middle);
         return {
           type: "internal",
-          mode: parser25.mode
+          mode: parser24.mode
         };
       }
     });
@@ -11014,15 +11014,15 @@ var init_katex = __esm({
       },
       handler: (context, args) => {
         var delim = checkDelimiter(args[0], context);
-        var parser25 = context.parser;
-        ++parser25.leftrightDepth;
-        var body = parser25.parseExpression(false);
-        --parser25.leftrightDepth;
-        parser25.expect("\\right", false);
-        var right2 = assertNodeType(parser25.parseFunction(), "leftright-right");
+        var parser24 = context.parser;
+        ++parser24.leftrightDepth;
+        var body = parser24.parseExpression(false);
+        --parser24.leftrightDepth;
+        parser24.expect("\\right", false);
+        var right2 = assertNodeType(parser24.parseFunction(), "leftright-right");
         return {
           type: "leftright",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body,
           left: delim.text,
           right: right2.delim,
@@ -11316,14 +11316,14 @@ var init_katex = __esm({
       },
       handler(_ref2, args, optArgs) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var color2 = assertNodeType(args[0], "color-token").color;
         var body = args[1];
         return {
           type: "enclose",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           backgroundColor: color2,
           body
@@ -11342,7 +11342,7 @@ var init_katex = __esm({
       },
       handler(_ref2, args, optArgs) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var borderColor = assertNodeType(args[0], "color-token").color;
@@ -11350,7 +11350,7 @@ var init_katex = __esm({
         var body = args[2];
         return {
           type: "enclose",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           backgroundColor,
           borderColor,
@@ -11370,11 +11370,11 @@ var init_katex = __esm({
       },
       handler(_ref3, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref3;
         return {
           type: "enclose",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: "\\fbox",
           body: args[0]
         };
@@ -11388,13 +11388,13 @@ var init_katex = __esm({
       },
       handler(_ref4, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref4;
         var body = args[0];
         return {
           type: "enclose",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           body
         };
@@ -11411,16 +11411,16 @@ var init_katex = __esm({
       },
       handler(_ref5, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref5;
-        if (parser25.mode === "math") {
-          parser25.settings.reportNonstrict("mathVsSout", "LaTeX's \\sout works only in text mode");
+        if (parser24.mode === "math") {
+          parser24.settings.reportNonstrict("mathVsSout", "LaTeX's \\sout works only in text mode");
         }
         var body = args[0];
         return {
           type: "enclose",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           body
         };
@@ -11438,11 +11438,11 @@ var init_katex = __esm({
       },
       handler(_ref6, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref6;
         return {
           type: "enclose",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: "\\angl",
           body: args[0]
         };
@@ -11972,19 +11972,19 @@ var init_katex = __esm({
           }]
         };
         if (context.envName.charAt(context.envName.length - 1) === "*") {
-          var parser25 = context.parser;
-          parser25.consumeSpaces();
-          if (parser25.fetch().text === "[") {
-            parser25.consume();
-            parser25.consumeSpaces();
-            colAlign = parser25.fetch().text;
+          var parser24 = context.parser;
+          parser24.consumeSpaces();
+          if (parser24.fetch().text === "[") {
+            parser24.consume();
+            parser24.consumeSpaces();
+            colAlign = parser24.fetch().text;
             if (!"lcr".includes(colAlign)) {
-              throw new ParseError("Expected l or c or r", parser25.nextToken);
+              throw new ParseError("Expected l or c or r", parser24.nextToken);
             }
-            parser25.consume();
-            parser25.consumeSpaces();
-            parser25.expect("]");
-            parser25.consume();
+            parser24.consume();
+            parser24.consumeSpaces();
+            parser24.expect("]");
+            parser24.consume();
             payload.cols = [{
               type: "align",
               align: colAlign
@@ -12207,7 +12207,7 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var nameGroup = args[0];
@@ -12226,16 +12226,16 @@ var init_katex = __esm({
           var {
             args: _args,
             optArgs
-          } = parser25.parseArguments("\\begin{" + envName + "}", env);
+          } = parser24.parseArguments("\\begin{" + envName + "}", env);
           var context = {
-            mode: parser25.mode,
+            mode: parser24.mode,
             envName,
-            parser: parser25
+            parser: parser24
           };
           var result = env.handler(context, _args, optArgs);
-          parser25.expect("\\end", false);
-          var endNameToken = parser25.nextToken;
-          var end2 = assertNodeType(parser25.parseFunction(), "environment");
+          parser24.expect("\\end", false);
+          var endNameToken = parser24.nextToken;
+          var end2 = assertNodeType(parser24.parseFunction(), "environment");
           if (end2.name !== envName) {
             throw new ParseError("Mismatch: \\begin{" + envName + "} matched by \\end{" + end2.name + "}", endNameToken);
           }
@@ -12243,7 +12243,7 @@ var init_katex = __esm({
         }
         return {
           type: "environment",
-          mode: parser25.mode,
+          mode: parser24.mode,
           name: envName,
           nameGroup
         };
@@ -12291,7 +12291,7 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var body = normalizeArgument(args[0]);
@@ -12301,7 +12301,7 @@ var init_katex = __esm({
         }
         return {
           type: "font",
-          mode: parser25.mode,
+          mode: parser24.mode,
           font: func.slice(1),
           body
         };
@@ -12317,16 +12317,16 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var body = args[0];
         return {
           type: "mclass",
-          mode: parser25.mode,
+          mode: parser24.mode,
           mclass: binrelClass(body),
           body: [{
             type: "font",
-            mode: parser25.mode,
+            mode: parser24.mode,
             font: "boldsymbol",
             body
           }],
@@ -12343,21 +12343,21 @@ var init_katex = __esm({
       },
       handler: (_ref3, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName,
           breakOnTokenText
         } = _ref3;
         var {
           mode
-        } = parser25;
-        var body = parser25.parseExpression(true, breakOnTokenText);
+        } = parser24;
+        var body = parser24.parseExpression(true, breakOnTokenText);
         return {
           type: "font",
           mode,
           font: "math" + funcName.slice(1),
           body: {
             type: "ordgroup",
-            mode: parser25.mode,
+            mode: parser24.mode,
             body
           }
         };
@@ -12549,7 +12549,7 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var numer = args[0];
@@ -12596,7 +12596,7 @@ var init_katex = __esm({
         }
         return wrapWithStyle({
           type: "genfrac",
-          mode: parser25.mode,
+          mode: parser24.mode,
           numer,
           denom,
           continued,
@@ -12618,7 +12618,7 @@ var init_katex = __esm({
       },
       handler(_ref2) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName,
           token: token2
         } = _ref2;
@@ -12644,7 +12644,7 @@ var init_katex = __esm({
         }
         return {
           type: "infix",
-          mode: parser25.mode,
+          mode: parser24.mode,
           replaceWith,
           token: token2
         };
@@ -12669,7 +12669,7 @@ var init_katex = __esm({
       },
       handler(_ref3, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref3;
         var numer = args[4];
         var denom = args[5];
@@ -12699,7 +12699,7 @@ var init_katex = __esm({
         }
         return wrapWithStyle({
           type: "genfrac",
-          mode: parser25.mode,
+          mode: parser24.mode,
           numer,
           denom,
           continued: false,
@@ -12720,13 +12720,13 @@ var init_katex = __esm({
       },
       handler(_ref4, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName,
           token: token2
         } = _ref4;
         return {
           type: "infix",
-          mode: parser25.mode,
+          mode: parser24.mode,
           replaceWith: "\\\\abovefrac",
           size: assertNodeType(args[0], "size").value,
           token: token2
@@ -12742,7 +12742,7 @@ var init_katex = __esm({
       },
       handler: (_ref5, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref5;
         var numer = args[0];
@@ -12754,7 +12754,7 @@ var init_katex = __esm({
         var hasBarLine = barSize.number > 0;
         return {
           type: "genfrac",
-          mode: parser25.mode,
+          mode: parser24.mode,
           numer,
           denom,
           continued: false,
@@ -12857,12 +12857,12 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         return {
           type: "horizBrace",
-          mode: parser25.mode,
+          mode: parser24.mode,
           label: funcName,
           isOver: funcName.includes("\\over"),
           base: args[0]
@@ -12881,19 +12881,19 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var body = args[1];
         var href = assertNodeType(args[0], "url").url;
-        if (!parser25.settings.isTrusted({
+        if (!parser24.settings.isTrusted({
           command: "\\href",
           url: href
         })) {
-          return parser25.formatUnsupportedCmd("\\href");
+          return parser24.formatUnsupportedCmd("\\href");
         }
         return {
           type: "href",
-          mode: parser25.mode,
+          mode: parser24.mode,
           href,
           body: ordargument(body)
         };
@@ -12921,14 +12921,14 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var href = assertNodeType(args[0], "url").url;
-        if (!parser25.settings.isTrusted({
+        if (!parser24.settings.isTrusted({
           command: "\\url",
           url: href
         })) {
-          return parser25.formatUnsupportedCmd("\\url");
+          return parser24.formatUnsupportedCmd("\\url");
         }
         var chars = [];
         for (var i4 = 0; i4 < href.length; i4++) {
@@ -12944,13 +12944,13 @@ var init_katex = __esm({
         }
         var body = {
           type: "text",
-          mode: parser25.mode,
+          mode: parser24.mode,
           font: "\\texttt",
           body: chars
         };
         return {
           type: "href",
-          mode: parser25.mode,
+          mode: parser24.mode,
           href,
           body: ordargument(body)
         };
@@ -12967,11 +12967,11 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "hbox",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body: ordargument(args[0])
         };
       },
@@ -12993,14 +12993,14 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName,
           token: token2
         } = _ref2;
         var value = assertNodeType(args[0], "raw").string;
         var body = args[1];
-        if (parser25.settings.strict) {
-          parser25.settings.reportNonstrict("htmlExtension", "HTML extension is disabled on strict mode");
+        if (parser24.settings.strict) {
+          parser24.settings.reportNonstrict("htmlExtension", "HTML extension is disabled on strict mode");
         }
         var trustContext;
         var attributes = {};
@@ -13047,12 +13047,12 @@ var init_katex = __esm({
           default:
             throw new Error("Unrecognized html command");
         }
-        if (!parser25.settings.isTrusted(trustContext)) {
-          return parser25.formatUnsupportedCmd(funcName);
+        if (!parser24.settings.isTrusted(trustContext)) {
+          return parser24.formatUnsupportedCmd(funcName);
         }
         return {
           type: "html",
-          mode: parser25.mode,
+          mode: parser24.mode,
           attributes,
           body: ordargument(body)
         };
@@ -13085,11 +13085,11 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "htmlmathml",
-          mode: parser25.mode,
+          mode: parser24.mode,
           html: ordargument(args[0]),
           mathml: ordargument(args[1])
         };
@@ -13135,7 +13135,7 @@ var init_katex = __esm({
       },
       handler: (_ref2, args, optArgs) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var width3 = {
           number: 0,
@@ -13182,15 +13182,15 @@ var init_katex = __esm({
           alt = alt.replace(/^.*[\\/]/, "");
           alt = alt.substring(0, alt.lastIndexOf("."));
         }
-        if (!parser25.settings.isTrusted({
+        if (!parser24.settings.isTrusted({
           command: "\\includegraphics",
           url: src
         })) {
-          return parser25.formatUnsupportedCmd("\\includegraphics");
+          return parser24.formatUnsupportedCmd("\\includegraphics");
         }
         return {
           type: "includegraphics",
-          mode: parser25.mode,
+          mode: parser24.mode,
           alt,
           width: width3,
           height: height2,
@@ -13251,29 +13251,29 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var size4 = assertNodeType(args[0], "size");
-        if (parser25.settings.strict) {
+        if (parser24.settings.strict) {
           var mathFunction = funcName[1] === "m";
           var muUnit = size4.value.unit === "mu";
           if (mathFunction) {
             if (!muUnit) {
-              parser25.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + funcName + " supports only mu units, " + ("not " + size4.value.unit + " units"));
+              parser24.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + funcName + " supports only mu units, " + ("not " + size4.value.unit + " units"));
             }
-            if (parser25.mode !== "math") {
-              parser25.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + funcName + " works only in math mode");
+            if (parser24.mode !== "math") {
+              parser24.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + funcName + " works only in math mode");
             }
           } else {
             if (muUnit) {
-              parser25.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + funcName + " doesn't support mu units");
+              parser24.settings.reportNonstrict("mathVsTextUnits", "LaTeX's " + funcName + " doesn't support mu units");
             }
           }
         }
         return {
           type: "kern",
-          mode: parser25.mode,
+          mode: parser24.mode,
           dimension: size4.value
         };
       },
@@ -13294,13 +13294,13 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var body = args[0];
         return {
           type: "lap",
-          mode: parser25.mode,
+          mode: parser24.mode,
           alignment: funcName.slice(5),
           body
         };
@@ -13345,17 +13345,17 @@ var init_katex = __esm({
       handler(_ref2, args) {
         var {
           funcName,
-          parser: parser25
+          parser: parser24
         } = _ref2;
-        var outerMode = parser25.mode;
-        parser25.switchMode("math");
+        var outerMode = parser24.mode;
+        parser24.switchMode("math");
         var close2 = funcName === "\\(" ? "\\)" : "$";
-        var body = parser25.parseExpression(false, close2);
-        parser25.expect(close2);
-        parser25.switchMode(outerMode);
+        var body = parser24.parseExpression(false, close2);
+        parser24.expect(close2);
+        parser24.switchMode(outerMode);
         return {
           type: "styling",
-          mode: parser25.mode,
+          mode: parser24.mode,
           style: "text",
           resetFont: true,
           body
@@ -13398,11 +13398,11 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "mathchoice",
-          mode: parser25.mode,
+          mode: parser24.mode,
           display: ordargument(args[0]),
           text: ordargument(args[1]),
           script: ordargument(args[2]),
@@ -13642,7 +13642,7 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var fName = funcName;
@@ -13651,7 +13651,7 @@ var init_katex = __esm({
         }
         return {
           type: "op",
-          mode: parser25.mode,
+          mode: parser24.mode,
           limits: true,
           parentIsSupSub: false,
           symbol: true,
@@ -13670,12 +13670,12 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var body = args[0];
         return {
           type: "op",
-          mode: parser25.mode,
+          mode: parser24.mode,
           limits: false,
           parentIsSupSub: false,
           symbol: false,
@@ -13701,12 +13701,12 @@ var init_katex = __esm({
       },
       handler(_ref3) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref3;
         return {
           type: "op",
-          mode: parser25.mode,
+          mode: parser24.mode,
           limits: false,
           parentIsSupSub: false,
           symbol: false,
@@ -13724,12 +13724,12 @@ var init_katex = __esm({
       },
       handler(_ref4) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref4;
         return {
           type: "op",
-          mode: parser25.mode,
+          mode: parser24.mode,
           limits: true,
           parentIsSupSub: false,
           symbol: false,
@@ -13748,7 +13748,7 @@ var init_katex = __esm({
       },
       handler(_ref5) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref5;
         var fName = funcName;
@@ -13757,7 +13757,7 @@ var init_katex = __esm({
         }
         return {
           type: "op",
-          mode: parser25.mode,
+          mode: parser24.mode,
           limits: false,
           parentIsSupSub: false,
           symbol: true,
@@ -13862,13 +13862,13 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var body = args[0];
         return {
           type: "operatorname",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body: ordargument(body),
           alwaysHandleSupSub: funcName === "\\operatornamewithlimits",
           limits: false,
@@ -13899,12 +13899,12 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var body = args[0];
         return {
           type: "overline",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body
         };
       },
@@ -13947,12 +13947,12 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var body = args[0];
         return {
           type: "phantom",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body: ordargument(body)
         };
       },
@@ -13975,12 +13975,12 @@ var init_katex = __esm({
       },
       handler: (_ref2, args) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var body = args[0];
         return {
           type: "vphantom",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body
         };
       },
@@ -14007,13 +14007,13 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var amount = assertNodeType(args[0], "size").value;
         var body = args[1];
         return {
           type: "raisebox",
-          mode: parser25.mode,
+          mode: parser24.mode,
           dy: amount,
           body
         };
@@ -14047,11 +14047,11 @@ var init_katex = __esm({
       },
       handler(_ref2) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "internal",
-          mode: parser25.mode
+          mode: parser24.mode
         };
       }
     });
@@ -14067,14 +14067,14 @@ var init_katex = __esm({
       },
       handler(_ref2, args, optArgs) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var shift2 = optArgs[0];
         var width3 = assertNodeType(args[0], "size");
         var height2 = assertNodeType(args[1], "size");
         return {
           type: "rule",
-          mode: parser25.mode,
+          mode: parser24.mode,
           shift: shift2 && assertNodeType(shift2, "size").value,
           width: width3.value,
           height: height2.value
@@ -14130,12 +14130,12 @@ var init_katex = __esm({
         var {
           breakOnTokenText,
           funcName,
-          parser: parser25
+          parser: parser24
         } = _ref2;
-        var body = parser25.parseExpression(false, breakOnTokenText);
+        var body = parser24.parseExpression(false, breakOnTokenText);
         return {
           type: "sizing",
-          mode: parser25.mode,
+          mode: parser24.mode,
           // Figure out what size to use based on the list of functions above
           size: sizeFuncs.indexOf(funcName) + 1,
           body
@@ -14160,7 +14160,7 @@ var init_katex = __esm({
       },
       handler: (_ref2, args, optArgs) => {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var smashHeight = false;
         var smashDepth = false;
@@ -14187,7 +14187,7 @@ var init_katex = __esm({
         var body = args[0];
         return {
           type: "smash",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body,
           smashHeight,
           smashDepth
@@ -14246,13 +14246,13 @@ var init_katex = __esm({
       },
       handler(_ref2, args, optArgs) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         var index = optArgs[0];
         var body = args[0];
         return {
           type: "sqrt",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body,
           index
         };
@@ -14343,16 +14343,16 @@ var init_katex = __esm({
         var {
           breakOnTokenText,
           funcName,
-          parser: parser25
+          parser: parser24
         } = _ref2;
-        var body = parser25.parseExpression(true, breakOnTokenText);
+        var body = parser24.parseExpression(true, breakOnTokenText);
         var style3 = funcName.slice(1, funcName.length - 5);
         if (!isStyleStr(style3)) {
           throw new Error("Unknown style: " + style3);
         }
         return {
           type: "styling",
-          mode: parser25.mode,
+          mode: parser24.mode,
           // Figure out what style to use by pulling out the style from
           // the function name
           style: style3,
@@ -14746,13 +14746,13 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25,
+          parser: parser24,
           funcName
         } = _ref2;
         var body = args[0];
         return {
           type: "text",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body: ordargument(body),
           font: funcName
         };
@@ -14776,11 +14776,11 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "underline",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body: args[0]
         };
       },
@@ -14826,11 +14826,11 @@ var init_katex = __esm({
       },
       handler(_ref2, args) {
         var {
-          parser: parser25
+          parser: parser24
         } = _ref2;
         return {
           type: "vcenter",
-          mode: parser25.mode,
+          mode: parser24.mode,
           body: args[0]
         };
       },
@@ -17422,12 +17422,12 @@ var init_katex = __esm({
       if (!(typeof toParse === "string" || toParse instanceof String)) {
         throw new TypeError("KaTeX can only parse string typed expression");
       }
-      var parser25 = new Parser(toParse, settings);
-      delete parser25.gullet.macros.current["\\df@tag"];
-      var tree = parser25.parse();
-      delete parser25.gullet.macros.current["\\current@color"];
-      delete parser25.gullet.macros.current["\\color"];
-      if (parser25.gullet.macros.get("\\df@tag")) {
+      var parser24 = new Parser(toParse, settings);
+      delete parser24.gullet.macros.current["\\df@tag"];
+      var tree = parser24.parse();
+      delete parser24.gullet.macros.current["\\current@color"];
+      delete parser24.gullet.macros.current["\\color"];
+      if (parser24.gullet.macros.get("\\df@tag")) {
         if (!settings.displayMode) {
           throw new ParseError("\\tag works only in display equations");
         }
@@ -17435,7 +17435,7 @@ var init_katex = __esm({
           type: "tag",
           mode: "text",
           body: tree,
-          tag: parser25.subparse([new Token("\\df@tag")])
+          tag: parser24.subparse([new Token("\\df@tag")])
         }];
       }
       return tree;
@@ -29641,20 +29641,20 @@ function loadAll$1(input, iterator, options2) {
     options2 = iterator;
     iterator = null;
   }
-  var documents2 = loadDocuments(input, options2);
+  var documents = loadDocuments(input, options2);
   if (typeof iterator !== "function") {
-    return documents2;
+    return documents;
   }
-  for (var index = 0, length2 = documents2.length; index < length2; index += 1) {
-    iterator(documents2[index]);
+  for (var index = 0, length2 = documents.length; index < length2; index += 1) {
+    iterator(documents[index]);
   }
 }
 function load$1(input, options2) {
-  var documents2 = loadDocuments(input, options2);
-  if (documents2.length === 0) {
+  var documents = loadDocuments(input, options2);
+  if (documents.length === 0) {
     return void 0;
-  } else if (documents2.length === 1) {
-    return documents2[0];
+  } else if (documents.length === 1) {
+    return documents[0];
   }
   throw new exception("expected a single document in the stream, but found more");
 }
@@ -84712,7 +84712,7 @@ var init_c4Diagram_YG6GDRKO = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 24], $V1 = [1, 25], $V2 = [1, 26], $V3 = [1, 27], $V4 = [1, 28], $V5 = [1, 63], $V6 = [1, 64], $V7 = [1, 65], $V8 = [1, 66], $V9 = [1, 67], $Va = [1, 68], $Vb = [1, 69], $Vc = [1, 29], $Vd = [1, 30], $Ve = [1, 31], $Vf = [1, 32], $Vg = [1, 33], $Vh = [1, 34], $Vi = [1, 35], $Vj = [1, 36], $Vk = [1, 37], $Vl = [1, 38], $Vm = [1, 39], $Vn = [1, 40], $Vo = [1, 41], $Vp = [1, 42], $Vq = [1, 43], $Vr = [1, 44], $Vs = [1, 45], $Vt = [1, 46], $Vu = [1, 47], $Vv = [1, 48], $Vw = [1, 50], $Vx = [1, 51], $Vy = [1, 52], $Vz = [1, 53], $VA = [1, 54], $VB = [1, 55], $VC = [1, 56], $VD = [1, 57], $VE = [1, 58], $VF = [1, 59], $VG = [1, 60], $VH = [14, 42], $VI = [14, 34, 36, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74], $VJ = [12, 14, 34, 36, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74], $VK = [1, 82], $VL = [1, 83], $VM = [1, 84], $VN = [1, 85], $VO = [12, 14, 42], $VP = [12, 14, 33, 42], $VQ = [12, 14, 33, 42, 76, 77, 79, 80], $VR = [12, 33], $VS = [34, 36, 37, 38, 39, 40, 41, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -85689,13 +85689,13 @@ var init_c4Diagram_YG6GDRKO = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser.parser = parser;
@@ -88261,7 +88261,7 @@ You have to call mermaid.initialize.`
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 4], $V1 = [1, 3], $V2 = [1, 5], $V3 = [1, 8, 9, 10, 11, 27, 34, 36, 38, 44, 60, 84, 85, 86, 87, 88, 89, 102, 105, 106, 109, 111, 114, 115, 116, 121, 122, 123, 124], $V4 = [2, 2], $V5 = [1, 13], $V6 = [1, 14], $V7 = [1, 15], $V8 = [1, 16], $V9 = [1, 23], $Va = [1, 25], $Vb = [1, 26], $Vc = [1, 27], $Vd = [1, 49], $Ve = [1, 48], $Vf = [1, 29], $Vg = [1, 30], $Vh = [1, 31], $Vi = [1, 32], $Vj = [1, 33], $Vk = [1, 44], $Vl = [1, 46], $Vm = [1, 42], $Vn = [1, 47], $Vo = [1, 43], $Vp = [1, 50], $Vq = [1, 45], $Vr = [1, 51], $Vs = [1, 52], $Vt = [1, 34], $Vu = [1, 35], $Vv = [1, 36], $Vw = [1, 37], $Vx = [1, 57], $Vy = [1, 8, 9, 10, 11, 27, 32, 34, 36, 38, 44, 60, 84, 85, 86, 87, 88, 89, 102, 105, 106, 109, 111, 114, 115, 116, 121, 122, 123, 124], $Vz = [1, 61], $VA = [1, 60], $VB = [1, 62], $VC = [8, 9, 11, 75, 77, 78], $VD = [1, 78], $VE = [1, 91], $VF = [1, 96], $VG = [1, 95], $VH = [1, 92], $VI = [1, 88], $VJ = [1, 94], $VK = [1, 90], $VL = [1, 97], $VM = [1, 93], $VN = [1, 98], $VO = [1, 89], $VP = [8, 9, 10, 11, 40, 75, 77, 78], $VQ = [8, 9, 10, 11, 40, 46, 75, 77, 78], $VR = [8, 9, 10, 11, 29, 40, 44, 46, 48, 50, 52, 54, 56, 58, 60, 63, 65, 67, 68, 70, 75, 77, 78, 89, 102, 105, 106, 109, 111, 114, 115, 116], $VS = [8, 9, 11, 44, 60, 75, 77, 78, 89, 102, 105, 106, 109, 111, 114, 115, 116], $VT = [44, 60, 89, 102, 105, 106, 109, 111, 114, 115, 116], $VU = [1, 121], $VV = [1, 122], $VW = [1, 124], $VX = [1, 123], $VY = [44, 60, 62, 74, 89, 102, 105, 106, 109, 111, 114, 115, 116], $VZ = [1, 133], $V_ = [1, 147], $V$ = [1, 148], $V01 = [1, 149], $V11 = [1, 150], $V21 = [1, 135], $V31 = [1, 137], $V41 = [1, 141], $V51 = [1, 142], $V61 = [1, 143], $V71 = [1, 144], $V81 = [1, 145], $V91 = [1, 146], $Va1 = [1, 151], $Vb1 = [1, 152], $Vc1 = [1, 131], $Vd1 = [1, 132], $Ve1 = [1, 139], $Vf1 = [1, 134], $Vg1 = [1, 138], $Vh1 = [1, 136], $Vi1 = [8, 9, 10, 11, 27, 32, 34, 36, 38, 44, 60, 84, 85, 86, 87, 88, 89, 102, 105, 106, 109, 111, 114, 115, 116, 121, 122, 123, 124], $Vj1 = [1, 154], $Vk1 = [1, 156], $Vl1 = [8, 9, 11], $Vm1 = [8, 9, 10, 11, 14, 44, 60, 89, 105, 106, 109, 111, 114, 115, 116], $Vn1 = [1, 176], $Vo1 = [1, 172], $Vp1 = [1, 173], $Vq1 = [1, 177], $Vr1 = [1, 174], $Vs1 = [1, 175], $Vt1 = [77, 116, 119], $Vu1 = [8, 9, 10, 11, 12, 14, 27, 29, 32, 44, 60, 75, 84, 85, 86, 87, 88, 89, 90, 105, 109, 111, 114, 115, 116], $Vv1 = [10, 106], $Vw1 = [31, 49, 51, 53, 55, 57, 62, 64, 66, 67, 69, 71, 116, 117, 118], $Vx1 = [1, 247], $Vy1 = [1, 245], $Vz1 = [1, 249], $VA1 = [1, 243], $VB1 = [1, 244], $VC1 = [1, 246], $VD1 = [1, 248], $VE1 = [1, 250], $VF1 = [1, 268], $VG1 = [8, 9, 11, 106], $VH1 = [8, 9, 10, 11, 60, 84, 105, 106, 109, 110, 111, 112];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -89492,13 +89492,13 @@ You have to call mermaid.initialize.`
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser2.parser = parser2;
@@ -89713,7 +89713,7 @@ var init_erDiagram_Q2GNP2WA = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [6, 8, 10, 22, 24, 26, 28, 33, 34, 35, 36, 37, 40, 43, 44, 50], $V1 = [1, 10], $V2 = [1, 11], $V3 = [1, 12], $V4 = [1, 13], $V5 = [1, 20], $V6 = [1, 21], $V7 = [1, 22], $V8 = [1, 23], $V9 = [1, 24], $Va = [1, 19], $Vb = [1, 25], $Vc = [1, 26], $Vd = [1, 18], $Ve = [1, 33], $Vf = [1, 34], $Vg = [1, 35], $Vh = [1, 36], $Vi = [1, 37], $Vj = [6, 8, 10, 13, 15, 17, 20, 21, 22, 24, 26, 28, 33, 34, 35, 36, 37, 40, 43, 44, 50, 63, 64, 65, 66, 67], $Vk = [1, 42], $Vl = [1, 43], $Vm = [1, 52], $Vn = [40, 50, 68, 69], $Vo = [1, 63], $Vp = [1, 61], $Vq = [1, 58], $Vr = [1, 62], $Vs = [1, 64], $Vt = [6, 8, 10, 13, 17, 22, 24, 26, 28, 33, 34, 35, 36, 37, 40, 41, 42, 43, 44, 48, 49, 50, 63, 64, 65, 66, 67], $Vu = [63, 64, 65, 66, 67], $Vv = [1, 81], $Vw = [1, 80], $Vx = [1, 78], $Vy = [1, 79], $Vz = [6, 10, 42, 47], $VA = [6, 10, 13, 41, 42, 47, 48, 49], $VB = [1, 89], $VC = [1, 88], $VD = [1, 87], $VE = [19, 56], $VF = [1, 98], $VG = [1, 97], $VH = [19, 56, 58, 60];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -90602,13 +90602,13 @@ var init_erDiagram_Q2GNP2WA = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser3.parser = parser3;
@@ -110686,14 +110686,14 @@ var init_langium_parser = __esm({
 });
 
 // node_modules/langium/lib/parser/parser-builder-base.js
-function createParser(grammar, parser25, tokens2) {
+function createParser(grammar, parser24, tokens2) {
   const parserContext = {
-    parser: parser25,
+    parser: parser24,
     tokens: tokens2,
     ruleNames: /* @__PURE__ */ new Map()
   };
   buildRules(parserContext, grammar);
-  return parser25;
+  return parser24;
 }
 function buildRules(parserContext, grammar) {
   const reachable = getAllReachableRules(grammar, false);
@@ -110837,15 +110837,15 @@ function buildUnorderedGroup(ctx, group2) {
   };
   const alternatives = (args) => ctx.parser.alternatives(orIdx, methods.map((method, idx) => {
     const alt = { ALT: () => true };
-    const parser25 = ctx.parser;
+    const parser24 = ctx.parser;
     alt.ALT = () => {
       method.ALT(args);
-      if (!parser25.isRecording()) {
-        const key = idFunc(orIdx, parser25);
-        if (!parser25.unorderedGroups.get(key)) {
-          parser25.unorderedGroups.set(key, []);
+      if (!parser24.isRecording()) {
+        const key = idFunc(orIdx, parser24);
+        if (!parser24.unorderedGroups.get(key)) {
+          parser24.unorderedGroups.set(key, []);
         }
-        const groupState = parser25.unorderedGroups.get(key);
+        const groupState = parser24.unorderedGroups.get(key);
         if (typeof (groupState === null || groupState === void 0 ? void 0 : groupState[idx]) === "undefined") {
           groupState[idx] = true;
         }
@@ -110856,7 +110856,7 @@ function buildUnorderedGroup(ctx, group2) {
       alt.GATE = () => gate(args);
     } else {
       alt.GATE = () => {
-        const trackedAlternatives = parser25.unorderedGroups.get(idFunc(orIdx, parser25));
+        const trackedAlternatives = parser24.unorderedGroups.get(idFunc(orIdx, parser24));
         const allow = !(trackedAlternatives === null || trackedAlternatives === void 0 ? void 0 : trackedAlternatives[idx]);
         return allow;
       };
@@ -111022,10 +111022,10 @@ var init_parser_builder_base = __esm({
 function createCompletionParser(services) {
   const grammar = services.Grammar;
   const lexer = services.parser.Lexer;
-  const parser25 = new LangiumCompletionParser(services);
-  createParser(grammar, parser25, lexer.definition);
-  parser25.finalize();
-  return parser25;
+  const parser24 = new LangiumCompletionParser(services);
+  createParser(grammar, parser24, lexer.definition);
+  parser24.finalize();
+  return parser24;
 }
 var init_completion_parser_builder = __esm({
   "node_modules/langium/lib/parser/completion-parser-builder.js"() {
@@ -111036,15 +111036,15 @@ var init_completion_parser_builder = __esm({
 
 // node_modules/langium/lib/parser/langium-parser-builder.js
 function createLangiumParser(services) {
-  const parser25 = prepareLangiumParser(services);
-  parser25.finalize();
-  return parser25;
+  const parser24 = prepareLangiumParser(services);
+  parser24.finalize();
+  return parser24;
 }
 function prepareLangiumParser(services) {
   const grammar = services.Grammar;
   const lexer = services.parser.Lexer;
-  const parser25 = new LangiumParser(services);
-  return createParser(grammar, parser25, lexer.definition);
+  const parser24 = new LangiumParser(services);
+  return createParser(grammar, parser24, lexer.definition);
 }
 var init_langium_parser_builder = __esm({
   "node_modules/langium/lib/parser/langium-parser-builder.js"() {
@@ -114190,9 +114190,9 @@ var init_document_builder = __esm({
         this.indexManager = services.workspace.IndexManager;
         this.serviceRegistry = services.ServiceRegistry;
       }
-      async build(documents2, options2 = {}, cancelToken = cancellation_exports.CancellationToken.None) {
+      async build(documents, options2 = {}, cancelToken = cancellation_exports.CancellationToken.None) {
         var _a, _b;
-        for (const document2 of documents2) {
+        for (const document2 of documents) {
           const key = document2.uri.toString();
           if (document2.state === DocumentState.Validated) {
             if (typeof options2.validation === "boolean" && options2.validation) {
@@ -114222,8 +114222,8 @@ var init_document_builder = __esm({
           }
         }
         this.currentState = DocumentState.Changed;
-        await this.emitUpdate(documents2.map((e) => e.uri), []);
-        await this.buildDocuments(documents2, options2, cancelToken);
+        await this.emitUpdate(documents.map((e) => e.uri), []);
+        await this.buildDocuments(documents, options2, cancelToken);
       }
       async update(changed, deleted, cancelToken = cancellation_exports.CancellationToken.None) {
         this.currentState = DocumentState.Changed;
@@ -114266,21 +114266,21 @@ var init_document_builder = __esm({
        * This improves the responsiveness in large workspaces as users usually don't care about diagnostics
        * in files that are currently not opened in the editor.
        */
-      sortDocuments(documents2) {
+      sortDocuments(documents) {
         let left2 = 0;
-        let right2 = documents2.length - 1;
+        let right2 = documents.length - 1;
         while (left2 < right2) {
-          while (left2 < documents2.length && this.hasTextDocument(documents2[left2])) {
+          while (left2 < documents.length && this.hasTextDocument(documents[left2])) {
             left2++;
           }
-          while (right2 >= 0 && !this.hasTextDocument(documents2[right2])) {
+          while (right2 >= 0 && !this.hasTextDocument(documents[right2])) {
             right2--;
           }
           if (left2 < right2) {
-            [documents2[left2], documents2[right2]] = [documents2[right2], documents2[left2]];
+            [documents[left2], documents[right2]] = [documents[right2], documents[left2]];
           }
         }
-        return documents2;
+        return documents;
       }
       hasTextDocument(doc) {
         var _a;
@@ -114313,22 +114313,22 @@ var init_document_builder = __esm({
        * @param cancelToken A cancellation token that can be used to cancel the build.
        * @returns A promise that resolves when the build is done.
        */
-      async buildDocuments(documents2, options2, cancelToken) {
-        this.prepareBuild(documents2, options2);
-        await this.runCancelable(documents2, DocumentState.Parsed, cancelToken, (doc) => this.langiumDocumentFactory.update(doc, cancelToken));
-        await this.runCancelable(documents2, DocumentState.IndexedContent, cancelToken, (doc) => this.indexManager.updateContent(doc, cancelToken));
-        await this.runCancelable(documents2, DocumentState.ComputedScopes, cancelToken, async (doc) => {
+      async buildDocuments(documents, options2, cancelToken) {
+        this.prepareBuild(documents, options2);
+        await this.runCancelable(documents, DocumentState.Parsed, cancelToken, (doc) => this.langiumDocumentFactory.update(doc, cancelToken));
+        await this.runCancelable(documents, DocumentState.IndexedContent, cancelToken, (doc) => this.indexManager.updateContent(doc, cancelToken));
+        await this.runCancelable(documents, DocumentState.ComputedScopes, cancelToken, async (doc) => {
           const scopeComputation = this.serviceRegistry.getServices(doc.uri).references.ScopeComputation;
           doc.precomputedScopes = await scopeComputation.computeLocalScopes(doc, cancelToken);
         });
-        await this.runCancelable(documents2, DocumentState.Linked, cancelToken, (doc) => {
+        await this.runCancelable(documents, DocumentState.Linked, cancelToken, (doc) => {
           const linker = this.serviceRegistry.getServices(doc.uri).references.Linker;
           return linker.link(doc, cancelToken);
         });
-        await this.runCancelable(documents2, DocumentState.IndexedReferences, cancelToken, (doc) => this.indexManager.updateReferences(doc, cancelToken));
-        const toBeValidated = documents2.filter((doc) => this.shouldValidate(doc));
+        await this.runCancelable(documents, DocumentState.IndexedReferences, cancelToken, (doc) => this.indexManager.updateReferences(doc, cancelToken));
+        const toBeValidated = documents.filter((doc) => this.shouldValidate(doc));
         await this.runCancelable(toBeValidated, DocumentState.Validated, cancelToken, (doc) => this.validate(doc, cancelToken));
-        for (const doc of documents2) {
+        for (const doc of documents) {
           const state3 = this.buildState.get(doc.uri.toString());
           if (state3) {
             state3.completed = true;
@@ -114341,8 +114341,8 @@ var init_document_builder = __esm({
        * @param documents collection of documents to be built
        * @param options the {@link BuildOptions} to use
        */
-      prepareBuild(documents2, options2) {
-        for (const doc of documents2) {
+      prepareBuild(documents, options2) {
+        for (const doc of documents) {
           const key = doc.uri.toString();
           const state3 = this.buildState.get(key);
           if (!state3 || state3.completed) {
@@ -114364,15 +114364,15 @@ var init_document_builder = __esm({
        * @returns A promise that resolves when all documents have been processed or the operation is canceled.
        * @throws Will throw `OperationCancelled` if the operation is canceled via a `CancellationToken`.
        */
-      async runCancelable(documents2, targetState, cancelToken, callback) {
-        const filtered = documents2.filter((doc) => doc.state < targetState);
+      async runCancelable(documents, targetState, cancelToken, callback) {
+        const filtered = documents.filter((doc) => doc.state < targetState);
         for (const document2 of filtered) {
           await interruptAndCheck(cancelToken);
           await callback(document2);
           document2.state = targetState;
           await this.notifyDocumentPhase(document2, targetState, cancelToken);
         }
-        const targetStateDocs = documents2.filter((doc) => doc.state === targetState);
+        const targetStateDocs = documents.filter((doc) => doc.state === targetState);
         await this.notifyBuildPhase(targetStateDocs, targetState, cancelToken);
         this.currentState = targetState;
       }
@@ -114438,15 +114438,15 @@ var init_document_builder = __esm({
           }
         }
       }
-      async notifyBuildPhase(documents2, state3, cancelToken) {
-        if (documents2.length === 0) {
+      async notifyBuildPhase(documents, state3, cancelToken) {
+        if (documents.length === 0) {
           return;
         }
         const listeners = this.buildPhaseListeners.get(state3);
         const listenersCopy = listeners.slice();
         for (const listener of listenersCopy) {
           await interruptAndCheck(cancelToken);
-          await listener(documents2, cancelToken);
+          await listener(documents, cancelToken);
         }
       }
       /**
@@ -114603,9 +114603,9 @@ var init_workspace_manager = __esm({
         });
       }
       async initializeWorkspace(folders, cancelToken = cancellation_exports.CancellationToken.None) {
-        const documents2 = await this.performStartup(folders);
+        const documents = await this.performStartup(folders);
         await interruptAndCheck(cancelToken);
-        await this.documentBuilder.build(documents2, this.initialBuildOptions, cancelToken);
+        await this.documentBuilder.build(documents, this.initialBuildOptions, cancelToken);
       }
       /**
        * Performs the uninterruptable startup sequence of the workspace manager.
@@ -114613,9 +114613,9 @@ var init_workspace_manager = __esm({
        */
       async performStartup(folders) {
         const fileExtensions = this.serviceRegistry.all.flatMap((e) => e.LanguageMetaData.fileExtensions);
-        const documents2 = [];
+        const documents = [];
         const collector = (document2) => {
-          documents2.push(document2);
+          documents.push(document2);
           if (!this.langiumDocuments.hasDocument(document2.uri)) {
             this.langiumDocuments.addDocument(document2);
           }
@@ -114623,7 +114623,7 @@ var init_workspace_manager = __esm({
         await this.loadAdditionalDocuments(folders, collector);
         await Promise.all(folders.map((wf) => [wf, this.getRootFolder(wf)]).map(async (entry) => this.traverseFolder(...entry, fileExtensions, collector)));
         this._ready.resolve();
-        return documents2;
+        return documents;
       }
       /**
        * Load all additional documents that shall be visible in the context of the given workspace
@@ -117608,8 +117608,8 @@ async function parse4(diagramType, text4) {
   if (!parsers[diagramType]) {
     await initializer();
   }
-  const parser25 = parsers[diagramType];
-  const result = parser25.parse(text4);
+  const parser24 = parsers[diagramType];
+  const result = parser24.parse(text4);
   if (result.lexerErrors.length > 0 || result.parserErrors.length > 0) {
     throw new MermaidParseError(result);
   }
@@ -117630,38 +117630,38 @@ var init_mermaid_parser_core = __esm({
     initializers = {
       info: /* @__PURE__ */ __name2(async () => {
         const { createInfoServices: createInfoServices2 } = await Promise.resolve().then(() => (init_info_NVLQJR56(), info_NVLQJR56_exports));
-        const parser25 = createInfoServices2().Info.parser.LangiumParser;
-        parsers.info = parser25;
+        const parser24 = createInfoServices2().Info.parser.LangiumParser;
+        parsers.info = parser24;
       }, "info"),
       packet: /* @__PURE__ */ __name2(async () => {
         const { createPacketServices: createPacketServices2 } = await Promise.resolve().then(() => (init_packet_BFZMPI3H(), packet_BFZMPI3H_exports));
-        const parser25 = createPacketServices2().Packet.parser.LangiumParser;
-        parsers.packet = parser25;
+        const parser24 = createPacketServices2().Packet.parser.LangiumParser;
+        parsers.packet = parser24;
       }, "packet"),
       pie: /* @__PURE__ */ __name2(async () => {
         const { createPieServices: createPieServices2 } = await Promise.resolve().then(() => (init_pie_7BOR55EZ(), pie_7BOR55EZ_exports));
-        const parser25 = createPieServices2().Pie.parser.LangiumParser;
-        parsers.pie = parser25;
+        const parser24 = createPieServices2().Pie.parser.LangiumParser;
+        parsers.pie = parser24;
       }, "pie"),
       architecture: /* @__PURE__ */ __name2(async () => {
         const { createArchitectureServices: createArchitectureServices2 } = await Promise.resolve().then(() => (init_architecture_U656AL7Q(), architecture_U656AL7Q_exports));
-        const parser25 = createArchitectureServices2().Architecture.parser.LangiumParser;
-        parsers.architecture = parser25;
+        const parser24 = createArchitectureServices2().Architecture.parser.LangiumParser;
+        parsers.architecture = parser24;
       }, "architecture"),
       gitGraph: /* @__PURE__ */ __name2(async () => {
         const { createGitGraphServices: createGitGraphServices2 } = await Promise.resolve().then(() => (init_gitGraph_F6HP7TQM(), gitGraph_F6HP7TQM_exports));
-        const parser25 = createGitGraphServices2().GitGraph.parser.LangiumParser;
-        parsers.gitGraph = parser25;
+        const parser24 = createGitGraphServices2().GitGraph.parser.LangiumParser;
+        parsers.gitGraph = parser24;
       }, "gitGraph"),
       radar: /* @__PURE__ */ __name2(async () => {
         const { createRadarServices: createRadarServices2 } = await Promise.resolve().then(() => (init_radar_NHE76QYJ(), radar_NHE76QYJ_exports));
-        const parser25 = createRadarServices2().Radar.parser.LangiumParser;
-        parsers.radar = parser25;
+        const parser24 = createRadarServices2().Radar.parser.LangiumParser;
+        parsers.radar = parser24;
       }, "radar"),
       treemap: /* @__PURE__ */ __name2(async () => {
         const { createTreemapServices: createTreemapServices2 } = await Promise.resolve().then(() => (init_treemap_KMMF4GRG(), treemap_KMMF4GRG_exports));
-        const parser25 = createTreemapServices2().Treemap.parser.LangiumParser;
-        parsers.treemap = parser25;
+        const parser24 = createTreemapServices2().Treemap.parser.LangiumParser;
+        parsers.treemap = parser24;
       }, "treemap")
     };
     __name2(parse4, "parse");
@@ -118152,9 +118152,9 @@ var init_gitGraphDiagram_NY62KEGX = __esm({
         Checkout: /* @__PURE__ */ __name((stmt) => db22.checkout(parseCheckout(stmt)), "Checkout"),
         CherryPicking: /* @__PURE__ */ __name((stmt) => db22.cherryPick(parseCherryPicking(stmt)), "CherryPicking")
       };
-      const parser25 = parsers2[statement.$type];
-      if (parser25) {
-        parser25(statement);
+      const parser24 = parsers2[statement.$type];
+      if (parser24) {
+        parser24(statement);
       } else {
         log.error(`Unknown statement type: ${statement.$type}`);
       }
@@ -119798,7 +119798,7 @@ var init_ganttDiagram_JELNMOA3 = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [6, 8, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33, 35, 36, 38, 40], $V1 = [1, 26], $V2 = [1, 27], $V3 = [1, 28], $V4 = [1, 29], $V5 = [1, 30], $V6 = [1, 31], $V7 = [1, 32], $V8 = [1, 33], $V9 = [1, 34], $Va = [1, 9], $Vb = [1, 10], $Vc = [1, 11], $Vd = [1, 12], $Ve = [1, 13], $Vf = [1, 14], $Vg = [1, 15], $Vh = [1, 16], $Vi = [1, 19], $Vj = [1, 20], $Vk = [1, 21], $Vl = [1, 22], $Vm = [1, 23], $Vn = [1, 25], $Vo = [1, 35];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -120557,13 +120557,13 @@ var init_ganttDiagram_JELNMOA3 = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser5.parser = parser5;
@@ -122358,7 +122358,7 @@ var init_quadrantDiagram_AYHSOK5B = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 3], $V1 = [1, 4], $V2 = [1, 5], $V3 = [1, 6], $V4 = [1, 7], $V5 = [1, 4, 5, 10, 12, 13, 14, 18, 25, 35, 37, 39, 41, 42, 48, 50, 51, 52, 53, 54, 55, 56, 57, 60, 61, 63, 64, 65, 66, 67], $V6 = [1, 4, 5, 10, 12, 13, 14, 18, 25, 28, 35, 37, 39, 41, 42, 48, 50, 51, 52, 53, 54, 55, 56, 57, 60, 61, 63, 64, 65, 66, 67], $V7 = [55, 56, 57], $V8 = [2, 36], $V9 = [1, 37], $Va = [1, 36], $Vb = [1, 38], $Vc = [1, 35], $Vd = [1, 43], $Ve = [1, 41], $Vf = [1, 14], $Vg = [1, 23], $Vh = [1, 18], $Vi = [1, 19], $Vj = [1, 20], $Vk = [1, 21], $Vl = [1, 22], $Vm = [1, 24], $Vn = [1, 25], $Vo = [1, 26], $Vp = [1, 27], $Vq = [1, 28], $Vr = [1, 29], $Vs = [1, 32], $Vt = [1, 33], $Vu = [1, 34], $Vv = [1, 39], $Vw = [1, 40], $Vx = [1, 42], $Vy = [1, 44], $Vz = [1, 62], $VA = [1, 61], $VB = [4, 5, 8, 10, 12, 13, 14, 18, 44, 47, 49, 55, 56, 57, 63, 64, 65, 66, 67], $VC = [1, 65], $VD = [1, 66], $VE = [1, 67], $VF = [1, 68], $VG = [1, 69], $VH = [1, 70], $VI = [1, 71], $VJ = [1, 72], $VK = [1, 73], $VL = [1, 74], $VM = [1, 75], $VN = [1, 76], $VO = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18], $VP = [1, 90], $VQ = [1, 91], $VR = [1, 92], $VS = [1, 99], $VT = [1, 93], $VU = [1, 96], $VV = [1, 94], $VW = [1, 95], $VX = [1, 97], $VY = [1, 98], $VZ = [1, 102], $V_ = [10, 55, 56, 57], $V$ = [4, 5, 6, 8, 10, 11, 13, 17, 18, 19, 20, 55, 56, 57];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -123082,13 +123082,13 @@ var init_quadrantDiagram_AYHSOK5B = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser8.parser = parser8;
@@ -123824,7 +123824,7 @@ var init_xychartDiagram_PRI3JC2R = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 10, 12, 14, 16, 18, 19, 21, 23], $V1 = [2, 6], $V2 = [1, 3], $V3 = [1, 5], $V4 = [1, 6], $V5 = [1, 7], $V6 = [1, 5, 10, 12, 14, 16, 18, 19, 21, 23, 34, 35, 36], $V7 = [1, 25], $V8 = [1, 26], $V9 = [1, 28], $Va = [1, 29], $Vb = [1, 30], $Vc = [1, 31], $Vd = [1, 32], $Ve = [1, 33], $Vf = [1, 34], $Vg = [1, 35], $Vh = [1, 36], $Vi = [1, 37], $Vj = [1, 43], $Vk = [1, 42], $Vl = [1, 47], $Vm = [1, 50], $Vn = [1, 10, 12, 14, 16, 18, 19, 21, 23, 34, 35, 36], $Vo = [1, 10, 12, 14, 16, 18, 19, 21, 23, 24, 26, 27, 28, 34, 35, 36], $Vp = [1, 10, 12, 14, 16, 18, 19, 21, 23, 24, 26, 27, 28, 34, 35, 36, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50], $Vq = [1, 64];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -124517,13 +124517,13 @@ var init_xychartDiagram_PRI3JC2R = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser9.parser = parser9;
@@ -125565,7 +125565,7 @@ var init_requirementDiagram_UZGBJVZJ = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 3], $V1 = [1, 4], $V2 = [1, 5], $V3 = [1, 6], $V4 = [5, 6, 8, 9, 11, 13, 21, 22, 23, 24, 41, 42, 43, 44, 45, 46, 54, 72, 74, 77, 89, 90], $V5 = [1, 22], $V6 = [2, 7], $V7 = [1, 26], $V8 = [1, 27], $V9 = [1, 28], $Va = [1, 29], $Vb = [1, 33], $Vc = [1, 34], $Vd = [1, 35], $Ve = [1, 36], $Vf = [1, 37], $Vg = [1, 38], $Vh = [1, 24], $Vi = [1, 31], $Vj = [1, 32], $Vk = [1, 30], $Vl = [1, 39], $Vm = [1, 40], $Vn = [5, 8, 9, 11, 13, 21, 22, 23, 24, 41, 42, 43, 44, 45, 46, 54, 72, 74, 77, 89, 90], $Vo = [1, 61], $Vp = [89, 90], $Vq = [5, 8, 9, 11, 13, 21, 22, 23, 24, 27, 29, 41, 42, 43, 44, 45, 46, 54, 61, 63, 72, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90], $Vr = [27, 29], $Vs = [1, 70], $Vt = [1, 71], $Vu = [1, 72], $Vv = [1, 73], $Vw = [1, 74], $Vx = [1, 75], $Vy = [1, 76], $Vz = [1, 83], $VA = [1, 80], $VB = [1, 84], $VC = [1, 85], $VD = [1, 86], $VE = [1, 87], $VF = [1, 88], $VG = [1, 89], $VH = [1, 90], $VI = [1, 91], $VJ = [1, 92], $VK = [5, 8, 9, 11, 13, 21, 22, 23, 24, 27, 41, 42, 43, 44, 45, 46, 54, 72, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90], $VL = [63, 64], $VM = [1, 101], $VN = [5, 8, 9, 11, 13, 21, 22, 23, 24, 41, 42, 43, 44, 45, 46, 54, 72, 74, 76, 77, 89, 90], $VO = [5, 8, 9, 11, 13, 21, 22, 23, 24, 41, 42, 43, 44, 45, 46, 54, 72, 74, 75, 76, 77, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90], $VP = [1, 110], $VQ = [1, 106], $VR = [1, 107], $VS = [1, 108], $VT = [1, 109], $VU = [1, 111], $VV = [1, 116], $VW = [1, 117], $VX = [1, 114], $VY = [1, 115];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -126392,13 +126392,13 @@ var init_requirementDiagram_UZGBJVZJ = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser10.parser = parser10;
@@ -127057,7 +127057,7 @@ var init_sequenceDiagram_WL72ISMW = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 2], $V1 = [1, 3], $V2 = [1, 4], $V3 = [2, 4], $V4 = [1, 9], $V5 = [1, 11], $V6 = [1, 13], $V7 = [1, 14], $V8 = [1, 16], $V9 = [1, 17], $Va = [1, 18], $Vb = [1, 24], $Vc = [1, 25], $Vd = [1, 26], $Ve = [1, 27], $Vf = [1, 28], $Vg = [1, 29], $Vh = [1, 30], $Vi = [1, 31], $Vj = [1, 32], $Vk = [1, 33], $Vl = [1, 34], $Vm = [1, 35], $Vn = [1, 36], $Vo = [1, 37], $Vp = [1, 38], $Vq = [1, 39], $Vr = [1, 41], $Vs = [1, 42], $Vt = [1, 43], $Vu = [1, 44], $Vv = [1, 45], $Vw = [1, 46], $Vx = [1, 4, 5, 13, 14, 16, 18, 21, 23, 29, 30, 31, 33, 35, 36, 37, 38, 39, 41, 43, 44, 46, 47, 48, 49, 50, 52, 53, 55, 60, 61, 62, 63, 71], $Vy = [2, 71], $Vz = [4, 5, 16, 50, 52, 53], $VA = [4, 5, 13, 14, 16, 18, 21, 23, 29, 30, 31, 33, 35, 36, 37, 38, 39, 41, 43, 44, 46, 50, 52, 53, 55, 60, 61, 62, 63, 71], $VB = [4, 5, 13, 14, 16, 18, 21, 23, 29, 30, 31, 33, 35, 36, 37, 38, 39, 41, 43, 44, 46, 49, 50, 52, 53, 55, 60, 61, 62, 63, 71], $VC = [4, 5, 13, 14, 16, 18, 21, 23, 29, 30, 31, 33, 35, 36, 37, 38, 39, 41, 43, 44, 46, 48, 50, 52, 53, 55, 60, 61, 62, 63, 71], $VD = [4, 5, 13, 14, 16, 18, 21, 23, 29, 30, 31, 33, 35, 36, 37, 38, 39, 41, 43, 44, 46, 47, 50, 52, 53, 55, 60, 61, 62, 63, 71], $VE = [69, 70, 71], $VF = [1, 127];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -128011,13 +128011,13 @@ var init_sequenceDiagram_WL72ISMW = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser11.parser = parser11;
@@ -130773,7 +130773,7 @@ var init_chunk_B4BG7PRW = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 18], $V1 = [1, 19], $V2 = [1, 20], $V3 = [1, 41], $V4 = [1, 42], $V5 = [1, 26], $V6 = [1, 24], $V7 = [1, 25], $V8 = [1, 32], $V9 = [1, 33], $Va = [1, 34], $Vb = [1, 45], $Vc = [1, 35], $Vd = [1, 36], $Ve = [1, 37], $Vf = [1, 38], $Vg = [1, 27], $Vh = [1, 28], $Vi = [1, 29], $Vj = [1, 30], $Vk = [1, 31], $Vl = [1, 44], $Vm = [1, 46], $Vn = [1, 43], $Vo = [1, 47], $Vp = [1, 9], $Vq = [1, 8, 9], $Vr = [1, 58], $Vs = [1, 59], $Vt = [1, 60], $Vu = [1, 61], $Vv = [1, 62], $Vw = [1, 63], $Vx = [1, 64], $Vy = [1, 8, 9, 41], $Vz = [1, 76], $VA = [1, 8, 9, 12, 13, 22, 39, 41, 44, 68, 69, 70, 71, 72, 73, 74, 79, 81], $VB = [1, 8, 9, 12, 13, 18, 20, 22, 39, 41, 44, 50, 60, 68, 69, 70, 71, 72, 73, 74, 79, 81, 86, 100, 102, 103], $VC = [13, 60, 86, 100, 102, 103], $VD = [13, 60, 73, 74, 86, 100, 102, 103], $VE = [13, 60, 68, 69, 70, 71, 72, 86, 100, 102, 103], $VF = [1, 100], $VG = [1, 117], $VH = [1, 113], $VI = [1, 109], $VJ = [1, 115], $VK = [1, 110], $VL = [1, 111], $VM = [1, 112], $VN = [1, 114], $VO = [1, 116], $VP = [22, 48, 60, 61, 82, 86, 87, 88, 89, 90], $VQ = [1, 8, 9, 39, 41, 44], $VR = [1, 8, 9, 22], $VS = [1, 145], $VT = [1, 8, 9, 61], $VU = [1, 8, 9, 22, 48, 60, 61, 82, 86, 87, 88, 89, 90];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -131770,13 +131770,13 @@ var init_chunk_B4BG7PRW = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser12.parser = parser12;
@@ -132803,7 +132803,7 @@ var init_chunk_DI55MBZ5 = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 2], $V1 = [1, 3], $V2 = [1, 4], $V3 = [2, 4], $V4 = [1, 9], $V5 = [1, 11], $V6 = [1, 16], $V7 = [1, 17], $V8 = [1, 18], $V9 = [1, 19], $Va = [1, 33], $Vb = [1, 20], $Vc = [1, 21], $Vd = [1, 22], $Ve = [1, 23], $Vf = [1, 24], $Vg = [1, 26], $Vh = [1, 27], $Vi = [1, 28], $Vj = [1, 29], $Vk = [1, 30], $Vl = [1, 31], $Vm = [1, 32], $Vn = [1, 35], $Vo = [1, 36], $Vp = [1, 37], $Vq = [1, 38], $Vr = [1, 34], $Vs = [1, 4, 5, 16, 17, 19, 21, 22, 24, 25, 26, 27, 28, 29, 33, 35, 37, 38, 41, 45, 48, 51, 52, 53, 54, 57], $Vt = [1, 4, 5, 14, 15, 16, 17, 19, 21, 22, 24, 25, 26, 27, 28, 29, 33, 35, 37, 38, 39, 40, 41, 45, 48, 51, 52, 53, 54, 57], $Vu = [4, 5, 16, 17, 19, 21, 22, 24, 25, 26, 27, 28, 29, 33, 35, 37, 38, 41, 45, 48, 51, 52, 53, 54, 57];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -133678,13 +133678,13 @@ var init_chunk_DI55MBZ5 = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser13.parser = parser13;
@@ -135358,7 +135358,7 @@ var init_journeyDiagram_XKPGCS4Q = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [6, 8, 10, 11, 12, 14, 16, 17, 18], $V1 = [1, 9], $V2 = [1, 10], $V3 = [1, 11], $V4 = [1, 12], $V5 = [1, 13], $V6 = [1, 14];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -135913,13 +135913,13 @@ var init_journeyDiagram_XKPGCS4Q = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser14.parser = parser14;
@@ -136589,7 +136589,7 @@ var init_timeline_definition_IT6M3QCI = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [6, 8, 10, 11, 12, 14, 16, 17, 20, 21], $V1 = [1, 9], $V2 = [1, 10], $V3 = [1, 11], $V4 = [1, 12], $V5 = [1, 13], $V6 = [1, 16], $V7 = [1, 17];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -137145,13 +137145,13 @@ var init_timeline_definition_IT6M3QCI = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser15.parser = parser15;
@@ -137913,7 +137913,7 @@ var init_mindmap_definition_VGOIOE7T = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 4], $V1 = [1, 13], $V2 = [1, 12], $V3 = [1, 15], $V4 = [1, 16], $V5 = [1, 20], $V6 = [1, 19], $V7 = [6, 7, 8], $V8 = [1, 26], $V9 = [1, 24], $Va = [1, 25], $Vb = [6, 7, 11], $Vc = [1, 6, 13, 15, 16, 19, 22], $Vd = [1, 33], $Ve = [1, 34], $Vf = [1, 6, 7, 11, 13, 15, 16, 19, 22];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -138566,13 +138566,13 @@ var init_mindmap_definition_VGOIOE7T = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser16.parser = parser16;
@@ -139061,7 +139061,7 @@ var init_kanban_definition_3W4ZIXB7 = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 4], $V1 = [1, 13], $V2 = [1, 12], $V3 = [1, 15], $V4 = [1, 16], $V5 = [1, 20], $V6 = [1, 19], $V7 = [6, 7, 8], $V8 = [1, 26], $V9 = [1, 24], $Va = [1, 25], $Vb = [6, 7, 11], $Vc = [1, 31], $Vd = [6, 7, 11, 24], $Ve = [1, 6, 13, 16, 17, 20, 23], $Vf = [1, 35], $Vg = [1, 36], $Vh = [1, 6, 7, 11, 13, 16, 17, 20, 23], $Vi = [1, 38];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -139752,13 +139752,13 @@ var init_kanban_definition_3W4ZIXB7 = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser17.parser = parser17;
@@ -143186,7 +143186,7 @@ var init_sankeyDiagram_TZEHDZUN = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 9], $V1 = [1, 10], $V2 = [1, 5, 10, 12];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -143687,13 +143687,13 @@ var init_sankeyDiagram_TZEHDZUN = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser18.parser = parser18;
@@ -145087,7 +145087,7 @@ var init_blockDiagram_VD42YOAC = __esm({
         for (o2 = o2 || {}, l3 = k2.length; l3--; o2[k2[l3]] = v3) ;
         return o2;
       }, "o"), $V0 = [1, 15], $V1 = [1, 7], $V2 = [1, 13], $V3 = [1, 14], $V4 = [1, 19], $V5 = [1, 16], $V6 = [1, 17], $V7 = [1, 18], $V8 = [8, 30], $V9 = [8, 10, 21, 28, 29, 30, 31, 39, 43, 46], $Va = [1, 23], $Vb = [1, 24], $Vc = [8, 10, 15, 16, 21, 28, 29, 30, 31, 39, 43, 46], $Vd = [8, 10, 15, 16, 21, 27, 28, 29, 30, 31, 39, 43, 46], $Ve = [1, 49];
-      var parser25 = {
+      var parser24 = {
         trace: /* @__PURE__ */ __name(function trace() {
         }, "trace"),
         yy: {},
@@ -146110,13 +146110,13 @@ var init_blockDiagram_VD42YOAC = __esm({
         };
         return lexer2;
       })();
-      parser25.lexer = lexer;
+      parser24.lexer = lexer;
       function Parser3() {
         this.yy = {};
       }
       __name(Parser3, "Parser");
-      Parser3.prototype = parser25;
-      parser25.Parser = Parser3;
+      Parser3.prototype = parser24;
+      parser24.Parser = Parser3;
       return new Parser3();
     })();
     parser21.parser = parser21;
@@ -158158,11 +158158,11 @@ var init_mermaid_core = __esm({
     __name(setA11yDiagramInfo, "setA11yDiagramInfo");
     __name(addSVGa11yTitleDescription, "addSVGa11yTitleDescription");
     Diagram = class _Diagram {
-      constructor(type3, text4, db7, parser25, renderer22) {
+      constructor(type3, text4, db7, parser24, renderer22) {
         this.type = type3;
         this.text = text4;
         this.db = db7;
-        this.parser = parser25;
+        this.parser = parser24;
         this.renderer = renderer22;
       }
       static {
@@ -158182,17 +158182,17 @@ var init_mermaid_core = __esm({
           const { id: id28, diagram: diagram27 } = await loader28();
           registerDiagram(id28, diagram27);
         }
-        const { db: db7, parser: parser25, renderer: renderer22, init: init22 } = getDiagram(type3);
-        if (parser25.parser) {
-          parser25.parser.yy = db7;
+        const { db: db7, parser: parser24, renderer: renderer22, init: init22 } = getDiagram(type3);
+        if (parser24.parser) {
+          parser24.parser.yy = db7;
         }
         db7.clear?.();
         init22?.(config5);
         if (metadata.title) {
           db7.setDiagramTitle?.(metadata.title);
         }
-        await parser25.parse(text4);
-        return new _Diagram(type3, text4, db7, parser25, renderer22);
+        await parser24.parse(text4);
+        return new _Diagram(type3, text4, db7, parser24, renderer22);
       }
       async render(id28, version3) {
         await this.renderer.draw(this.text, id28, version3, this);
@@ -158698,505 +158698,10 @@ ${config5.themeCSS}`;
   }
 });
 
-// src/view/graphics.js
-var require_graphics = __commonJS({
-  "src/view/graphics.js"(exports2, module2) {
-    function reducedMotion() {
-      return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    }
-    function animateCanvas(svg2) {
-      if (!reducedMotion()) svg2.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 180, easing: "ease-out", fill: "both" });
-    }
-    async function animateBranch(ids) {
-      if (reducedMotion()) return;
-      const elements2 = [...this.contentEl.querySelectorAll(".usbip-node,.usbip-edge")].filter((el) => ids.has(el.getAttribute("data-node-id")) || ids.has(el.getAttribute("data-child-id")));
-      await Promise.all(elements2.map((el) => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease-in", fill: "forwards" }).finished.catch(() => {
-      })));
-    }
-    function wrapLabel2(label, limit2) {
-      const chars = [...label];
-      if (chars.length <= limit2) return [label];
-      const split = Math.ceil(chars.length / 2);
-      return [chars.slice(0, split).join(""), chars.slice(split).join("")];
-    }
-    function starPoints(cx, cy, outer, inner2) {
-      const points = [];
-      for (let index = 0; index < 10; index += 1) {
-        const radius2 = index % 2 ? inner2 : outer;
-        const angle2 = -Math.PI / 2 + index * Math.PI / 5;
-        points.push(`${cx + Math.cos(angle2) * radius2},${cy + Math.sin(angle2) * radius2}`);
-      }
-      return points.join(" ");
-    }
-    function createSvgElement(name, attributes = {}) {
-      const element3 = document.createElementNS("http://www.w3.org/2000/svg", name);
-      Object.entries(attributes).forEach(([key, value]) => element3.setAttribute(key, String(value)));
-      return element3;
-    }
-    var COLORS = { \u5DF2\u5B8C\u6210: "#35b759", \u8FDB\u884C\u4E2D: "#e5b92f", \u672A\u5F00\u59CB: "#8b8b8b" };
-    var NodeRenderer = {
-      line(svg2, a, b2) {
-        const p2 = svg2.createSvg("path"), vertical = this.orientation === "vertical";
-        p2.setAttr("data-child-id", b2.id);
-        p2.setAttr(
-          "d",
-          vertical ? `M ${a.x} ${a.y} C ${a.x} ${(a.y + b2.y) / 2}, ${b2.x} ${(a.y + b2.y) / 2}, ${b2.x} ${b2.y}` : `M ${a.x} ${a.y} C ${(a.x + b2.x) / 2} ${a.y}, ${(a.x + b2.x) / 2} ${b2.y}, ${b2.x} ${b2.y}`
-        );
-        p2.addClass("usbip-edge");
-      },
-      node(svg2, n) {
-        const g = svg2.createSvg("g");
-        g.addClass("usbip-node");
-        g.setAttr("data-node-id", n.id);
-        if (this.selected === n.id) g.addClass("is-selected");
-        if (this.expanded.has(n.id)) g.addClass("is-expanded");
-        const color2 = COLORS[n.state] || COLORS["\u672A\u5F00\u59CB"];
-        let shape;
-        if (n.level === 1) {
-          shape = g.createSvg("polygon");
-          shape.setAttr("points", this.star(n.x, n.y, 25, 12));
-        } else if (n.level === 2) {
-          shape = g.createSvg("rect");
-          shape.setAttr("x", n.x - 21);
-          shape.setAttr("y", n.y - 21);
-          shape.setAttr("width", "42");
-          shape.setAttr("height", "42");
-          shape.setAttr("rx", "10");
-        } else {
-          shape = g.createSvg("polygon");
-          shape.setAttr(
-            "points",
-            `${n.x},${n.y - 24} ${n.x - 24},${n.y + 19} ${n.x + 24},${n.y + 19}`
-          );
-        }
-        shape.setAttr("fill", color2);
-        shape.addClass("usbip-shape");
-        const text4 = g.createSvg("text"), lines = this.wrap(n.label, 8), vertical = this.orientation === "vertical";
-        text4.setAttr("text-anchor", vertical ? "middle" : "start");
-        text4.addClass("usbip-node-label");
-        lines.forEach((line2, index) => {
-          const span = text4.createSvg("tspan");
-          span.textContent = line2;
-          span.setAttr("x", vertical ? n.x : n.x + 30);
-          span.setAttr(
-            "y",
-            vertical ? n.y + 36 + index * 13 : n.y - (lines.length - 1) * 7 + index * 14
-          );
-        });
-        const progress2 = text4.createSvg("tspan");
-        progress2.textContent = `\uFF08${n.passed}/${n.total}\uFF09`;
-        progress2.addClass("usbip-node-progress");
-        progress2.setAttr("x", vertical ? n.x : n.x + 30);
-        progress2.setAttr(
-          "y",
-          vertical ? n.y + 36 + lines.length * 13 : n.y + (lines.length + 1) * 7
-        );
-        const expandable = this.hasVisibleChildren(n), title2 = g.createSvg("title");
-        title2.textContent = expandable ? `${n.label} \xB7 ${n.state} \xB7 ${n.passed}/${n.total} \xB7 \u9996\u6B21\u5C55\u5F00\uFF0C\u518D\u6B21\u6253\u5F00\uFF1B\u53F3\u952E\u6536\u8D77\u6574\u68F5\u5206\u652F` : `${n.label} \xB7 ${n.state} \xB7 ${n.passed}/${n.total} \xB7 \u70B9\u51FB\u6253\u5F00`;
-        g.onclick = () => this.activate(n);
-        g.oncontextmenu = (event3) => {
-          event3.preventDefault();
-          event3.stopPropagation();
-          this.collapseBranch(n);
-        };
-      }
-    };
-    module2.exports = { reducedMotion, animateCanvas, animateBranch, wrap: wrapLabel2, star: starPoints, createSvgElement, ...NodeRenderer };
-  }
-});
-
-// src/view/interaction.js
-var require_interaction = __commonJS({
-  "src/view/interaction.js"(exports2, module2) {
-    var FocusController = {
-      setFocus(id28) {
-        this.selected = id28;
-        this.focusFamily = this.relatedIds(id28, this.nodeById);
-        const ancestors = this.ancestorIds(id28, this.nodeById);
-        for (const node2 of this.contentEl.querySelectorAll(".usbip-node")) {
-          const nodeId = node2.getAttribute("data-node-id");
-          node2.classList.toggle("is-selected", nodeId === id28);
-          node2.classList.toggle(
-            "is-focus-ancestor",
-            nodeId !== id28 && ancestors.has(nodeId)
-          );
-          node2.classList.toggle("is-unrelated", !this.focusFamily.has(nodeId));
-        }
-        for (const edge of this.contentEl.querySelectorAll(".usbip-edge"))
-          edge.classList.toggle(
-            "is-unrelated",
-            !this.focusFamily.has(edge.getAttribute("data-child-id"))
-          );
-      },
-      async focusPath(path3) {
-        let node2 = this.nodeById?.get(path3) || [...this.nodeById?.values?.() || []].find((x4) => x4.path === path3);
-        if (!node2) {
-          await this.render();
-          node2 = this.nodeById?.get(path3) || [...this.nodeById?.values?.() || []].find((x4) => x4.path === path3);
-        }
-        if (!node2) return;
-        this.rootFilter = "all";
-        let parent4 = node2.parent;
-        while (parent4) {
-          this.expanded.add(parent4);
-          parent4 = this.nodeById.get(parent4)?.parent;
-        }
-        this.selected = node2.id;
-        await this.render();
-        this.setFocus(node2.id);
-      }
-    };
-    var InteractionController = {
-      async activate(n) {
-        if (!this.hasVisibleChildren(n) || this.expanded.has(n.id)) {
-          this.setFocus(n.id);
-          await this.plugin.open(n.path, this.leaf);
-          return;
-        }
-        this.selected = n.id;
-        this.expanded.add(n.id);
-        await this.render("expand");
-      },
-      async collapseBranch(n) {
-        const ids = /* @__PURE__ */ new Set(), walk = (id28) => {
-          ids.add(id28);
-          const node2 = this.nodeById?.get(id28);
-          if (node2) node2.children.forEach(walk);
-        };
-        walk(n.id);
-        if (!this.expanded.has(n.id) && ![...ids].some((id28) => this.expanded.has(id28)))
-          return;
-        await this.animateBranch(ids);
-        for (const id28 of ids) this.expanded.delete(id28);
-        if (this.selected && ids.has(this.selected)) this.selected = null;
-        await this.render("collapse");
-      }
-    };
-    var TreeState = {
-      progress(all) {
-        const by = new Map(all.map((n) => [n.id, n]));
-        for (const n of all) {
-          if (n.level === 2 && (n.ownMethods?.length || n.ownTasks?.length)) {
-            const items = n.ownMethods?.length ? n.ownMethods : n.ownTasks;
-            n.passed = items.filter((m2) => m2.done).length;
-            n.total = items.length;
-          } else {
-            n.passed = n.level === 4 && n.state === "\u5DF2\u5B8C\u6210" ? 1 : 0;
-            n.total = n.level === 4 ? 1 : 0;
-          }
-        }
-        for (const level of [3, 2, 1])
-          for (const n of all.filter((x4) => x4.level === level))
-            for (const id28 of n.children) {
-              const child = by.get(id28);
-              if (child) {
-                n.passed += child.passed;
-                n.total += child.total;
-              }
-            }
-        for (const n of all)
-          if (n.level === 2 && (n.ownMethods?.length || n.ownTasks?.length)) {
-            const items = n.ownMethods?.length ? n.ownMethods : n.ownTasks;
-            n.passed = items.filter((m2) => m2.done).length;
-            n.total = items.length;
-          }
-      },
-      hasVisibleChildren(n) {
-        return n.children.some((id28) => (this.nodeById?.get(id28)?.level || 4) < 4);
-      },
-      relatedIds(id28, by) {
-        const out = /* @__PURE__ */ new Set();
-        if (!id28 || !by?.has(id28)) return out;
-        let cur = by.get(id28);
-        while (cur) {
-          out.add(cur.id);
-          cur = cur.parent ? by.get(cur.parent) : null;
-        }
-        const walk = (n) => {
-          for (const child of n.children || []) {
-            const c2 = by.get(child);
-            if (c2 && !out.has(c2.id)) {
-              out.add(c2.id);
-              walk(c2);
-            }
-          }
-        };
-        walk(by.get(id28));
-        return out;
-      },
-      ancestorIds(id28, by) {
-        const out = /* @__PURE__ */ new Set(), start3 = by?.get(id28);
-        let cur = start3?.parent ? by.get(start3.parent) : null;
-        while (cur) {
-          out.add(cur.id);
-          cur = cur.parent ? by.get(cur.parent) : null;
-        }
-        return out;
-      }
-    };
-    module2.exports = { FocusController, InteractionController, TreeState };
-  }
-});
-
-// src/view/canvas.js
-var require_canvas = __commonJS({
-  "src/view/canvas.js"(exports2, module2) {
-    var { ItemView } = require("obsidian");
-    var VIEW2 = "tree-view";
-    var TreeView2 = class extends ItemView {
-      constructor(leaf, plugin22) {
-        super(leaf);
-        this.plugin = plugin22;
-        this.orientation = "horizontal";
-        this.rootFilter = "all";
-        this.selected = null;
-        this.expanded = /* @__PURE__ */ new Set();
-        this.renderToken = 0;
-      }
-      getViewType() {
-        return VIEW2;
-      }
-      getDisplayText() {
-        return "\u6811\u72B6\u663E\u793A";
-      }
-      getIcon() {
-        return "git-fork";
-      }
-      async onOpen() {
-        await this.render();
-      }
-      async render(motion = null) {
-        return renderCycle(this, motion);
-      }
-      layout(nodes5) {
-        const config5 = this.plugin.config?.layout || {};
-        return layoutTree(nodes5, { vertical: this.orientation === "vertical", wrap: (label, limit2) => this.wrap(label, limit2), padding: config5.padding ?? 58, rankGap: config5.rankGap ?? 96 });
-      }
-    };
-    var LAYOUT_DEFAULTS = Object.freeze({ nodeWidth: 190, nodeHeight: 58, padding: 58, rankGap: 96 });
-    function layoutTree(nodes5, { vertical = false, wrap: wrap3 = (label) => [label], padding: padding2 = 58, rankGap = 96 } = {}) {
-      const map7 = new Map(nodes5.map((node2) => [node2.id, node2]));
-      const roots = nodes5.filter((node2) => !node2.parent || !map7.has(node2.parent));
-      const children2 = (node2) => node2.children.map((id28) => map7.get(id28)).filter(Boolean);
-      const span = (node2) => {
-        const lines = wrap3(node2.label, node2.level === 4 ? 9 : 8);
-        const own = vertical ? Math.max(54, Math.min(128, Math.max(...lines.map((line2) => [...line2].length)) * 10 + 20)) : lines.length > 1 ? 58 : 50;
-        const kids = children2(node2);
-        if (!kids.length) return node2.span = own;
-        return node2.span = Math.max(own, kids.reduce((sum, child) => sum + span(child), 0) + 10 * (kids.length - 1));
-      };
-      const assign8 = (node2, start3) => {
-        const kids = children2(node2), center3 = start3 + node2.span / 2;
-        if (vertical) node2.x = center3;
-        else node2.y = center3;
-        let cursor = center3 - (kids.reduce((sum, child) => sum + child.span, 0) + 10 * Math.max(0, kids.length - 1)) / 2;
-        kids.forEach((child) => {
-          assign8(child, cursor);
-          cursor += child.span + 10;
-        });
-      };
-      let offset = padding2;
-      roots.forEach((root5) => {
-        span(root5);
-        assign8(root5, offset);
-        offset += root5.span + 42;
-      });
-      nodes5.forEach((node2) => {
-        const main2 = padding2 + (node2.level - 1) * rankGap;
-        if (vertical) node2.y = main2;
-        else node2.x = main2;
-      });
-      return { width: Math.max(360, ...nodes5.map((node2) => node2.x + 90)), height: Math.max(300, ...nodes5.map((node2) => node2.y + 70)) };
-    }
-    async function renderCycle(view, motion = null) {
-      const host = view.contentEl, renderToken = ++view.renderToken, previous = view.lastPositions || /* @__PURE__ */ new Map();
-      host.empty();
-      host.addClass("usbip-tree-view");
-      try {
-        const all = await view.plugin.nodes();
-        if (renderToken !== view.renderToken) return;
-        view.progress(all);
-        const roots = all.filter(
-          (n) => !n.parent && (view.rootFilter === "all" || n.id === view.rootFilter)
-        ), visible = /* @__PURE__ */ new Set(), byId = new Map(all.map((n) => [n.id, n]));
-        view.nodeById = byId;
-        view.focusFamily = view.relatedIds(view.selected, byId);
-        const include = (n) => {
-          visible.add(n.id);
-          if (!view.expanded.has(n.id)) return;
-          for (const id28 of n.children) {
-            const child = byId.get(id28);
-            if (child && child.level < 4) include(child);
-          }
-        };
-        roots.forEach(include);
-        const nodes5 = all.filter((n) => visible.has(n.id));
-        if (!nodes5.length) {
-          host.createDiv({
-            cls: "usbip-empty",
-            text: "\u6CA1\u6709\u627E\u5230\u7B26\u5408\u76EE\u5F55\u89C4\u8303\u7684\u8282\u70B9\u3002\u8BF7\u68C0\u67E5\u6839\u76EE\u5F55\u53CA\u540C\u540D\u5165\u53E3\u6587\u4EF6\u3002"
-          });
-          return;
-        }
-        const viewport2 = host.createDiv({ cls: "usbip-tree-viewport" });
-        viewport2.oncontextmenu = (event3) => {
-          if (event3.target === viewport2 || event3.target.tagName === "svg") {
-            event3.preventDefault();
-            const keep = /* @__PURE__ */ new Set();
-            for (const id28 of view.focusFamily || [])
-              if (view.expanded.has(id28)) keep.add(id28);
-            view.expanded = keep;
-            view.render("collapse");
-          }
-        };
-        const svg2 = viewport2.createSvg("svg"), size4 = view.layout(nodes5);
-        svg2.setAttr("viewBox", `0 0 ${size4.width} ${size4.height}`);
-        svg2.setAttr("width", "100%");
-        svg2.setAttr("height", "100%");
-        svg2.setAttr("preserveAspectRatio", "xMidYMid meet");
-        svg2.addClass("usbip-tree-canvas");
-        const by = new Map(nodes5.map((n) => [n.id, n]));
-        for (const n of nodes5)
-          if (n.parent && by.has(n.parent)) view.line(svg2, by.get(n.parent), n);
-        for (const n of nodes5) view.node(svg2, n);
-        view.lastPositions = new Map(
-          nodes5.map((n) => [n.id, { x: n.x, y: n.y }])
-        );
-        for (const g of svg2.querySelectorAll(".usbip-node")) {
-          const old = previous.get(g.getAttribute("data-node-id")), cur = view.lastPositions.get(g.getAttribute("data-node-id"));
-          if (old && cur && !view.reducedMotion()) {
-            const dx = old.x - cur.x, dy = old.y - cur.y;
-            g.animate(
-              [
-                { transform: `translate(${dx}px,${dy}px)` },
-                { transform: "translate(0, 0)" }
-              ],
-              { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" }
-            );
-          }
-        }
-        if (view.selected) view.setFocus(view.selected);
-      } catch (error3) {
-        console.error("USB\u900F\u4F20\u5C42\u7EA7\u56FE\u6E32\u67D3\u5931\u8D25", error3);
-        {
-          const box = host.createEl("pre", { cls: "usbip-error" });
-          box.setText(
-            `\u5C42\u7EA7\u56FE\u6E32\u67D3\u5931\u8D25
-${error3?.stack || error3?.message || String(error3)}`
-          );
-          box.style.setProperty("display", "block");
-          box.style.setProperty("color", "#ff3333");
-          box.style.setProperty("background", "#fff0f0");
-          box.style.setProperty("white-space", "pre-wrap");
-        }
-      }
-    }
-    Object.assign(TreeView2.prototype, require_graphics());
-    var interaction = require_interaction();
-    Object.assign(
-      TreeView2.prototype,
-      interaction.FocusController,
-      interaction.InteractionController,
-      interaction.TreeState
-    );
-    module2.exports = TreeView2;
-  }
-});
-
-// src/core/configuration.js
-var require_configuration = __commonJS({
-  "src/core/configuration.js"(exports2, module2) {
-    var CONFIG_PATH = ".obsidian/plugins/tree-view/config.json";
-    var DEFAULT_CONFIG2 = {
-      displayName: "\u6811\u72B6\u663E\u793A",
-      roots: [],
-      scan: { entryFile: "same-name", children: "directories-and-files", parentLinks: "wikilinks-or-relative-paths" },
-      interaction: { openOnClick: true, expandOnFirstClick: true, contextMenuCollapse: true, focusSync: true },
-      layout: { defaultOrientation: "horizontal", fitToViewport: true }
-    };
-    async function loadConfig2(vault) {
-      try {
-        const user = JSON.parse(await vault.adapter.read(CONFIG_PATH));
-        return {
-          ...DEFAULT_CONFIG2,
-          ...user,
-          scan: { ...DEFAULT_CONFIG2.scan, ...user.scan || {} },
-          interaction: { ...DEFAULT_CONFIG2.interaction, ...user.interaction || {} },
-          layout: { ...DEFAULT_CONFIG2.layout, ...user.layout || {} }
-        };
-      } catch (_2) {
-        return DEFAULT_CONFIG2;
-      }
-    }
-    module2.exports = { CONFIG_PATH, DEFAULT_CONFIG: DEFAULT_CONFIG2, loadConfig: loadConfig2 };
-  }
-});
-
-// src/markdown/parsing.js
-var require_parsing = __commonJS({
-  "src/markdown/parsing.js"(exports2, module2) {
-    function tasks4(text4) {
-      return text4.split(/\r?\n/).flatMap((line2, lineNumber) => {
-        const match2 = line2.match(/^\s*(?:>\s*)?\|\s*- \[([ xX])\]\s*\|\s*([^|]+)/);
-        return match2 ? [{ line: lineNumber, label: match2[2].trim() || "\u6D4B\u8BD5\u9879", done: match2[1].toLowerCase() === "x" }] : [];
-      });
-    }
-    function methods(text4) {
-      const lines = text4.split(/\r?\n/), result = [];
-      for (let index = 0; index < lines.length; index += 1) {
-        const match2 = lines[index].match(/^>\s*\[!usb-method\]-\s*`([^`]+)`/);
-        if (!match2) continue;
-        const end2 = lines.findIndex((line2, i4) => i4 > index && /^>\s*\[!usb-method\]-/.test(line2));
-        const section = lines.slice(index, end2 < 0 ? lines.length : end2).join("\n");
-        const checks = tasks4(section);
-        result.push({ line: index, label: match2[1], done: checks.length > 0 && checks.every((item) => item.done) });
-      }
-      return result;
-    }
-    module2.exports = { tasks: tasks4, methods };
-  }
-});
-
-// src/data/model.js
-var require_model = __commonJS({
-  "src/data/model.js"(exports2, module2) {
-    var { TFolder } = require("obsidian");
-    async function title2(vault, file, fallback) {
-      const match2 = (await vault.read(file)).match(/^#\s+(.+)$/m);
-      return match2 ? match2[1].trim() : fallback;
-    }
-    async function state3(vault, metadataCache, file, tasks4) {
-      const items = tasks4(await vault.read(file));
-      if (items.length) return items.every((item) => item.done) ? "\u5DF2\u5B8C\u6210" : items.some((item) => item.done) ? "\u8FDB\u884C\u4E2D" : "\u672A\u5F00\u59CB";
-      return metadataCache.getFileCache(file)?.frontmatter?.status || "\u672A\u5F00\u59CB";
-    }
-    function orderedFolders(folder, text4) {
-      return ordered(folder.children.filter((item) => item instanceof TFolder), text4, (item) => `${item.name}/`);
-    }
-    function ordered(items, text4, key) {
-      return items.sort((a, b2) => {
-        const ai = text4.indexOf(key(a)), bi = text4.indexOf(key(b2));
-        if (ai >= 0 && bi >= 0) return ai - bi;
-        if (ai >= 0) return -1;
-        if (bi >= 0) return 1;
-        return a.name.localeCompare(b2.name);
-      });
-    }
-    function createNode({ id: id28, label, level, parent: parent4 = null, path: path3, state: state4 = "\u672A\u5F00\u59CB" }) {
-      return { id: id28, label, level, parent: parent4, path: path3, state: state4, children: [] };
-    }
-    function attach(parent4, child) {
-      if (!parent4.children.includes(child.id)) parent4.children.push(child.id);
-      child.parent = parent4.id;
-    }
-    module2.exports = { title: title2, state: state3, orderedFolders, ordered, createNode, attach };
-  }
-});
-
 // src/core/lifecycle.js
 var require_lifecycle = __commonJS({
   "src/core/lifecycle.js"(exports2, module2) {
-    var { Notice: Notice2 } = require("obsidian");
+    var { Notice } = require("obsidian");
     async function openTree(app, viewType) {
       let leaf = app.workspace.getLeavesOfType(viewType)[0];
       if (!leaf) {
@@ -159207,7 +158712,7 @@ var require_lifecycle = __commonJS({
     }
     async function openFile(app, path3, sourceLeaf) {
       const file = resolveFile(app, path3);
-      if (!file) return new Notice2(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
+      if (!file) return new Notice(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
       let target = app.workspace.getLeavesOfType("markdown").find((leaf) => leaf !== sourceLeaf);
       if (!target) target = app.workspace.getLeaf("split", "vertical");
       await target.openFile(file);
@@ -159224,11 +158729,11 @@ var require_lifecycle = __commonJS({
     }
     async function openFileInLeaf(app, path3, target) {
       const file = resolveFile(app, path3);
-      if (!file) return new Notice2(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
+      if (!file) return new Notice(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
       await target.openFile(file);
       app.workspace.revealLeaf(target);
     }
-    var RefreshManager2 = class {
+    var RefreshManager = class {
       constructor(plugin22, viewType) {
         this.plugin = plugin22;
         this.viewType = viewType;
@@ -159260,212 +158765,15 @@ var require_lifecycle = __commonJS({
         }
       }
     };
-    module2.exports = { openTree, openFile, openFileInLeaf, RefreshManager: RefreshManager2 };
-  }
-});
-
-// src/data/scanning.js
-var require_scanning = __commonJS({
-  "src/data/scanning.js"(exports2, module2) {
-    var { TFolder, TFile } = require("obsidian");
-    var Scanner2 = class {
-      constructor({ vault, metadataCache, config: config5, title: title2, fileState, methods, tasks: tasks4 }) {
-        this.vault = vault;
-        this.metadataCache = metadataCache;
-        this.config = config5;
-        this.title = title2;
-        this.fileState = fileState;
-        this.methods = methods;
-        this.tasks = tasks4;
-      }
-      ordered(folder, text4) {
-        return folder.children.filter((item) => item instanceof TFolder).sort((a, b2) => a.name.localeCompare(b2.name));
-      }
-      orderedModules(folder, text4) {
-        return folder.children.filter((item) => item instanceof TFile && item.extension === "md" && item.basename !== folder.name).sort((a, b2) => a.name.localeCompare(b2.name));
-      }
-      async rootSpecs() {
-        const root5 = this.vault.getRoot(), specs = [], configured = this.config?.roots || [];
-        const folders = configured.length ? configured.map((path3) => this.vault.getAbstractFileByPath(path3)).filter((x4) => x4 instanceof TFolder) : root5.children.filter((x4) => x4 instanceof TFolder && !x4.name.startsWith("."));
-        for (const folder of folders) {
-          const index = `${folder.path}/${folder.name}.md`, file = this.vault.getAbstractFileByPath(index);
-          if (file instanceof TFile)
-            specs.push({
-              dir: folder.path,
-              index,
-              label: await this.title(file, folder.name)
-            });
-        }
-        return specs;
-      }
-      async nodes() {
-        const nodes5 = [];
-        for (const spec of await this.rootSpecs()) {
-          const rf = this.vault.getAbstractFileByPath(spec.index);
-          if (!(rf instanceof TFile)) continue;
-          const root5 = {
-            id: spec.index,
-            label: spec.label,
-            level: 1,
-            parent: null,
-            path: spec.index,
-            state: await this.fileState(rf),
-            children: []
-          };
-          nodes5.push(root5);
-          const folder = this.vault.getAbstractFileByPath(spec.dir);
-          if (!(folder instanceof TFolder)) continue;
-          const rootText = await this.vault.read(rf);
-          for (const lf of this.ordered(folder, rootText)) {
-            const lp = `${lf.path}/${lf.name}.md`, lfile = this.vault.getAbstractFileByPath(lp);
-            if (!(lfile instanceof TFile)) continue;
-            const layer = {
-              id: lp,
-              label: await this.title(lfile, lf.name),
-              level: 2,
-              parent: root5.id,
-              path: lp,
-              state: await this.fileState(lfile),
-              children: [],
-              ownMethods: this.methods(await this.vault.read(lfile)),
-              ownTasks: this.tasks(await this.vault.read(lfile))
-            };
-            nodes5.push(layer);
-            root5.children.push(layer.id);
-            const layerText = await this.vault.read(lfile);
-            for (const mfile of this.orderedModules(lf, layerText)) {
-              const mp = mfile.path, module3 = {
-                id: mp,
-                label: await this.title(mfile, mfile.basename),
-                level: 3,
-                parent: layer.id,
-                path: mp,
-                state: await this.fileState(mfile),
-                children: []
-              };
-              nodes5.push(module3);
-              layer.children.push(module3.id);
-              for (const method of this.methods(await this.vault.read(mfile))) {
-                const item = {
-                  id: `${mp}#method-${method.line}`,
-                  label: method.label,
-                  level: 4,
-                  parent: module3.id,
-                  path: mp,
-                  state: method.done ? "\u5DF2\u5B8C\u6210" : "\u672A\u5F00\u59CB",
-                  children: []
-                };
-                nodes5.push(item);
-                module3.children.push(item.id);
-              }
-            }
-          }
-        }
-        const by = new Map(nodes5.map((n) => [n.id, n]));
-        for (const level of [3, 2, 1])
-          for (const n of nodes5.filter(
-            (x4) => x4.level === level && x4.children.length
-          )) {
-            const kids = n.children.map((id28) => by.get(id28)).filter(Boolean);
-            n.state = kids.every((x4) => x4.state === "\u5DF2\u5B8C\u6210") ? "\u5DF2\u5B8C\u6210" : kids.some((x4) => x4.state !== "\u672A\u5F00\u59CB") ? "\u8FDB\u884C\u4E2D" : "\u672A\u5F00\u59CB";
-          }
-        return nodes5;
-      }
-    };
-    module2.exports = Scanner2;
-  }
-});
-
-// src/markdown/editing.js
-var require_editing = __commonJS({
-  "src/markdown/editing.js"(exports2, module2) {
-    function escapeRegExp2(text4) {
-      return text4.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    }
-    async function updateChecklist2(vault, file, task, checked) {
-      await vault.process(file, (data5) => {
-        const lines = data5.split(/\r?\n/);
-        const pattern = new RegExp(`^\\s*(?:>\\s*)?\\|\\s*- \\[([ xX])\\]\\s*\\|\\s*${escapeRegExp2(task.label)}\\s*\\|`);
-        const index = lines.findIndex((line2) => pattern.test(line2));
-        if (index < 0) throw new Error(`\u627E\u4E0D\u5230\u9A8C\u8BC1\u4EFB\u52A1\uFF1A${task.label}`);
-        lines[index] = lines[index].replace(/- \[[ xX]\]/, checked ? "- [x]" : "- [ ]");
-        return lines.join("\n");
-      });
-    }
-    var { Notice: Notice2 } = require("obsidian");
-    function success(task, checked) {
-      new Notice2(`${checked ? "\u5DF2\u5B8C\u6210" : "\u5DF2\u53D6\u6D88"}\uFF1A${task.label}`);
-    }
-    function failure(box, checked, error3) {
-      box.checked = !checked;
-      new Notice2(error3?.message || "\u65E0\u6CD5\u66F4\u65B0\u9A8C\u8BC1\u4EFB\u52A1");
-    }
-    async function enhanceTaskTables(plugin22, el, ctx) {
-      const file = plugin22.app.vault.getAbstractFileByPath(ctx.sourcePath);
-      if (!file) return;
-      const source = await plugin22.app.vault.read(file), lines = source.split(/\r?\n/), section = ctx.getSectionInfo(el), start3 = section?.lineStart ?? 0, end2 = section?.lineEnd ?? lines.length - 1, tasks4 = [];
-      for (let line2 = start3; line2 <= end2; line2++) {
-        const m2 = lines[line2]?.match(
-          /^\s*(?:>\s*)?\|\s*- \[([ xX])\]\s*\|\s*([^|]+)\|/
-        );
-        if (m2)
-          tasks4.push({
-            line: line2,
-            label: m2[2].trim(),
-            done: m2[1].toLowerCase() === "x"
-          });
-      }
-      const cells = [
-        ...el.querySelectorAll("table tbody tr td:first-child")
-      ].filter(
-        (c2) => c2.querySelector('input[type="checkbox"]') || /-\s*\[[ xX]\]/.test(c2.textContent || "")
-      );
-      for (let i4 = 0; i4 < Math.min(cells.length, tasks4.length); i4++) {
-        const cell = cells[i4], task = tasks4[i4];
-        if (cell.dataset.usbipTask === "ready") continue;
-        cell.dataset.usbipTask = "ready";
-        cell.addClass("usbip-task-cell");
-        const old = cell.querySelector('input[type="checkbox"]'), box = document.createElement("input");
-        box.type = "checkbox";
-        box.checked = task.done;
-        box.className = "usbip-task-checkbox";
-        box.setAttribute(
-          "aria-label",
-          `${task.done ? "\u53D6\u6D88\u5B8C\u6210" : "\u6807\u8BB0\u5B8C\u6210"}\uFF1A${task.label}`
-        );
-        if (old) old.replaceWith(box);
-        else {
-          cell.textContent = (cell.textContent || "").replace(
-            /^\s*-\s*\[[ xX]\]\s*/,
-            ""
-          );
-          cell.prepend(document.createTextNode(" "));
-          cell.prepend(box);
-        }
-        box.onclick = (e) => e.stopPropagation();
-        box.onchange = () => plugin22.writeTask(file, task, box);
-      }
-    }
-    module2.exports = { updateChecklist: updateChecklist2, escapeRegExp: escapeRegExp2, success, failure, enhanceTaskTables };
+    module2.exports = { openTree, openFile, openFileInLeaf, RefreshManager };
   }
 });
 
 // src/plugin.js
-var { Plugin, Notice } = require("obsidian");
+var { Plugin } = require("obsidian");
 var mermaidModule = (init_mermaid_core(), __toCommonJS(mermaid_core_exports));
-var TreeView = require_canvas();
-var { loadConfig } = require_configuration();
-var parser24 = require_parsing();
-var documents = require_model();
-var { RefreshManager } = require_lifecycle();
-var Scanner = require_scanning();
 var navigation = require_lifecycle();
-var tableEditor = require_editing();
-var VIEW = "tree-view";
 var TreeDisplayPlugin = class extends Plugin {
-  async loadConfig() {
-    this.config = await loadConfig(this.app.vault);
-  }
   async onload() {
     const renderer10 = mermaidModule.default || mermaidModule;
     if (typeof renderer10.initialize !== "function" || typeof renderer10.render !== "function") {
@@ -159537,7 +158845,6 @@ var TreeDisplayPlugin = class extends Plugin {
 ${details}` });
       }
     });
-    await this.loadConfig();
     this.registerDomEvent(document, "click", (event3) => this.handleMermaidClick(event3), true);
     this.registerDomEvent(document, "mouseover", (event3) => this.handleMermaidHover(event3), true);
     this.lastPointer = null;
@@ -159546,59 +158853,6 @@ ${details}` });
     }, true);
     this.registerInterval(window.setInterval(() => this.clearStaleMermaidHover(), 100));
     this.registerEvent(this.app.workspace.on("window-open", (_workspaceWindow, popoutWindow) => this.bindMermaidWindow(popoutWindow)));
-    this.refreshing = false;
-    this.refreshAgain = false;
-    this.refreshNotice = false;
-    this.refreshManager = new RefreshManager(this, VIEW);
-    this.scanner = new Scanner({
-      vault: this.app.vault,
-      metadataCache: this.app.metadataCache,
-      config: this.config,
-      title: this.title.bind(this),
-      fileState: this.fileState.bind(this),
-      methods: this.methods.bind(this),
-      tasks: this.tasks.bind(this)
-    });
-    this.registerView(VIEW, (leaf) => new TreeView(leaf, this));
-    this.registerMarkdownPostProcessor(
-      (el, ctx) => this.enhanceTaskTables(el, ctx)
-    );
-    this.registerMarkdownPostProcessor(
-      (el, ctx) => this.enhanceMermaidLinks(el, ctx)
-    );
-    this.registerEvent(
-      this.app.workspace.on("file-open", (file) => this.syncFocus(file))
-    );
-    this.registerEvent(
-      this.app.workspace.on(
-        "active-leaf-change",
-        (leaf) => this.syncFocus(leaf?.view?.file)
-      )
-    );
-    this.registerEvent(
-      this.app.vault.on("modify", (f) => {
-        if (f.path.endsWith(".md")) this.requestRefresh();
-      })
-    );
-    this.registerEvent(
-      this.app.vault.on("create", () => this.requestRefresh())
-    );
-    this.registerEvent(
-      this.app.vault.on("delete", () => this.requestRefresh())
-    );
-    this.registerEvent(
-      this.app.vault.on("rename", () => this.requestRefresh())
-    );
-    this.addCommand({
-      id: "open-usbip-tree",
-      name: "\u6253\u5F00\u6811\u72B6\u663E\u793A",
-      callback: () => this.openTree()
-    });
-    this.addCommand({
-      id: "refresh-usbip-status",
-      name: "\u5237\u65B0\u6811\u72B6\u663E\u793A",
-      callback: () => this.requestRefresh({ immediate: true, notice: true })
-    });
   }
   configureControlledMermaid(dark, targetWidth) {
     const nodeSpacing = targetWidth < 600 ? 10 : targetWidth < 800 ? 16 : 24;
@@ -159727,7 +158981,9 @@ ${details}` });
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     let leaf = this.navigationLeaves[target];
     if (!leaf || !markdownLeaves.includes(leaf)) {
-      leaf = markdownLeaves.find((candidate) => this.isNavigationLeaf(candidate, target));
+      leaf = markdownLeaves.find(
+        (candidate) => candidate.containerEl?.dataset.treeViewNavigationTarget === target
+      );
     }
     if (!leaf) {
       leaf = this.app.workspace.getLeaf("split", "vertical");
@@ -159737,69 +158993,8 @@ ${details}` });
     if (leaf.containerEl) leaf.containerEl.dataset.treeViewNavigationTarget = target;
     return navigation.openFileInLeaf(this.app, path3, leaf);
   }
-  isNavigationLeaf(leaf, target) {
-    if (leaf.containerEl?.dataset.treeViewNavigationTarget === target) return true;
-    const filePath = leaf.view?.file?.path || "";
-    const match2 = filePath.match(/^my-skills\/项目开发流程\/(.+)\.md$/);
-    if (!match2) return false;
-    const relativeParts = match2[1].split("/");
-    const isDomainEntry = relativeParts.length === 2 && relativeParts[1] === "SKILL";
-    return target === "domain" ? isDomainEntry : !isDomainEntry;
-  }
   onunload() {
-    window.clearTimeout(this.refreshTimer);
-  }
-  requestRefresh({ immediate = false, notice = false } = {}) {
-    return this.refreshManager.request({ immediate, notice });
-    this.refreshNotice = this.refreshNotice || notice;
-    window.clearTimeout(this.refreshTimer);
-    if (immediate) return this.flushRefresh();
-    this.refreshTimer = window.setTimeout(() => this.flushRefresh(), 180);
-  }
-  async flushRefresh() {
-    return this.refreshManager.flush();
-    if (this.refreshing) {
-      this.refreshAgain = true;
-      return;
-    }
-    this.refreshing = true;
-    try {
-      do {
-        this.refreshAgain = false;
-        for (const leaf of this.app.workspace.getLeavesOfType(VIEW))
-          await leaf.view.render();
-      } while (this.refreshAgain);
-      if (this.refreshNotice) new Notice("USB\u900F\u4F20\u5C42\u7EA7\u56FE\u5DF2\u5237\u65B0");
-    } finally {
-      this.refreshNotice = false;
-      this.refreshing = false;
-    }
-  }
-  async syncFocus(file) {
-    if (!file?.path) return;
-    for (const leaf of this.app.workspace.getLeavesOfType(VIEW))
-      await leaf.view.focusPath(file.path);
-  }
-  tasks(text4) {
-    return parser24.tasks(text4);
-  }
-  methods(text4) {
-    return parser24.methods(text4);
-  }
-  async title(file, fallback) {
-    return documents.title(this.app.vault, file, fallback);
-  }
-  async fileState(file) {
-    return documents.state(this.app.vault, this.app.metadataCache, file, this.tasks.bind(this));
-  }
-  async rootSpecs() {
-    return this.scanner.rootSpecs();
-  }
-  async nodes() {
-    return this.scanner.nodes();
-  }
-  async enhanceTaskTables(el, ctx) {
-    return tableEditor.enhanceTaskTables(this, el, ctx);
+    this.navigationLeaves = { domain: null, module: null };
   }
   async enhanceMermaidLinks(el, ctx) {
     const sourcePath = ctx?.sourcePath;
