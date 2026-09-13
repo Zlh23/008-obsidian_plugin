@@ -170,7 +170,7 @@ class TreeDisplayPlugin extends Plugin {
     if (!links.length) return;
     const labels = [...svg.querySelectorAll(".messageText")];
     for (const link of links) {
-      const color = "#ffd43b";
+      const color = this.domainColor(link.path, sourcePath);
       const matches = labels.filter((label) => label.textContent.trim() === link.label);
       for (const label of matches) {
         label.dataset.obsidianLink = link.path;
@@ -211,10 +211,18 @@ class TreeDisplayPlugin extends Plugin {
             if (!markerId) continue;
             const marker = label.ownerDocument.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
             if (!marker) continue;
-            marker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+            const coloredId = `${markerId}-${color.replace("#", "")}`;
+            let coloredMarker = label.ownerDocument.querySelector(`marker[id="${CSS.escape(coloredId)}"]`);
+            if (!coloredMarker) {
+              coloredMarker = marker.cloneNode(true);
+              coloredMarker.setAttribute("id", coloredId);
+              marker.parentNode.appendChild(coloredMarker);
+            }
+            coloredMarker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
               shape.style.setProperty("fill", color, "important");
               shape.style.setProperty("stroke", color, "important");
             });
+            line.setAttribute(attribute, `url(#${coloredId})`);
           }
         }
         return;

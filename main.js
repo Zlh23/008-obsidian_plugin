@@ -158907,7 +158907,7 @@ ${details}` });
     if (!links3.length) return;
     const labels = [...svg2.querySelectorAll(".messageText")];
     for (const link of links3) {
-      const color2 = "#ffd43b";
+      const color2 = this.domainColor(link.path, sourcePath);
       const matches33 = labels.filter((label) => label.textContent.trim() === link.label);
       for (const label of matches33) {
         label.dataset.obsidianLink = link.path;
@@ -158946,10 +158946,18 @@ ${details}` });
             if (!markerId) continue;
             const marker = label.ownerDocument.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
             if (!marker) continue;
-            marker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+            const coloredId = `${markerId}-${color2.replace("#", "")}`;
+            let coloredMarker = label.ownerDocument.querySelector(`marker[id="${CSS.escape(coloredId)}"]`);
+            if (!coloredMarker) {
+              coloredMarker = marker.cloneNode(true);
+              coloredMarker.setAttribute("id", coloredId);
+              marker.parentNode.appendChild(coloredMarker);
+            }
+            coloredMarker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
               shape.style.setProperty("fill", color2, "important");
               shape.style.setProperty("stroke", color2, "important");
             });
+            line2.setAttribute(attribute, `url(#${coloredId})`);
           }
         }
         return;
