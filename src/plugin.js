@@ -188,6 +188,7 @@ class TreeDisplayPlugin extends Plugin {
       box.style.setProperty("fill", this.domainColor(pathByParticipant.get(participant), sourcePath), "important");
       box.style.setProperty("fill-opacity", "0.12", "important");
     });
+    this.styleSequenceParticipants(svg, pathByParticipant, sourcePath, source);
     for (const link of links) {
       const color = this.domainColor(link.path, sourcePath);
       const expected = normalizeMessage(link.label);
@@ -212,6 +213,32 @@ class TreeDisplayPlugin extends Plugin {
           if (event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
           void this.openInNavigationLeaf(link.path, "domain", sourcePath);
+        });
+      }
+    }
+  }
+  styleSequenceParticipants(svg, pathByParticipant, sourcePath, source) {
+    const participantNames = new Map();
+    for (const match of String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)\s+as\s+(.+)$/gm)) {
+      participantNames.set(match[1], match[2].trim());
+    }
+    const actorLines = [...svg.querySelectorAll("line.actor-line")];
+    const actorShapes = [...svg.querySelectorAll("rect.actor, rect.actor-top, rect.actor-bottom")];
+    for (const [participant, path] of pathByParticipant) {
+      const name = participantNames.get(participant);
+      const line = actorLines.find((candidate) => candidate.getAttribute("name") === name);
+      if (!line) continue;
+      const x = Number(line.getAttribute("x1"));
+      const color = this.domainColor(path, sourcePath);
+      for (const shape of actorShapes) {
+        const center = Number(shape.getAttribute("x")) + Number(shape.getAttribute("width")) / 2;
+        if (Math.abs(center - x) > 2) continue;
+        shape.style.setProperty("fill", color, "important");
+        shape.style.setProperty("stroke", color, "important");
+        const parent = shape.parentElement;
+        parent?.querySelectorAll("text, tspan, .text").forEach((text) => {
+          text.style.setProperty("fill", color, "important");
+          text.style.setProperty("color", color, "important");
         });
       }
     }

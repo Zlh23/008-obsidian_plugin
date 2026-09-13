@@ -158925,6 +158925,7 @@ ${details}` });
       box.style.setProperty("fill", this.domainColor(pathByParticipant.get(participant), sourcePath), "important");
       box.style.setProperty("fill-opacity", "0.12", "important");
     });
+    this.styleSequenceParticipants(svg2, pathByParticipant, sourcePath, source);
     for (const link of links3) {
       const color2 = this.domainColor(link.path, sourcePath);
       const expected = normalizeMessage(link.label);
@@ -158949,6 +158950,32 @@ ${details}` });
           if (event3.key !== "Enter" && event3.key !== " ") return;
           event3.preventDefault();
           void this.openInNavigationLeaf(link.path, "domain", sourcePath);
+        });
+      }
+    }
+  }
+  styleSequenceParticipants(svg2, pathByParticipant, sourcePath, source) {
+    const participantNames = /* @__PURE__ */ new Map();
+    for (const match2 of String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)\s+as\s+(.+)$/gm)) {
+      participantNames.set(match2[1], match2[2].trim());
+    }
+    const actorLines = [...svg2.querySelectorAll("line.actor-line")];
+    const actorShapes = [...svg2.querySelectorAll("rect.actor, rect.actor-top, rect.actor-bottom")];
+    for (const [participant, path3] of pathByParticipant) {
+      const name = participantNames.get(participant);
+      const line2 = actorLines.find((candidate) => candidate.getAttribute("name") === name);
+      if (!line2) continue;
+      const x4 = Number(line2.getAttribute("x1"));
+      const color2 = this.domainColor(path3, sourcePath);
+      for (const shape of actorShapes) {
+        const center3 = Number(shape.getAttribute("x")) + Number(shape.getAttribute("width")) / 2;
+        if (Math.abs(center3 - x4) > 2) continue;
+        shape.style.setProperty("fill", color2, "important");
+        shape.style.setProperty("stroke", color2, "important");
+        const parent4 = shape.parentElement;
+        parent4?.querySelectorAll("text, tspan, .text").forEach((text4) => {
+          text4.style.setProperty("fill", color2, "important");
+          text4.style.setProperty("color", color2, "important");
         });
       }
     }
