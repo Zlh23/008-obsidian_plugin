@@ -158906,9 +158906,11 @@ ${details}` });
   bindSequenceInterfaceLinks(svg2, links3, sourcePath) {
     if (!links3.length) return;
     const labels = [...svg2.querySelectorAll(".messageText")];
+    const normalizeMessage = (value) => String(value || "").replace(/\s+/g, " ").trim();
     for (const link of links3) {
       const color2 = this.domainColor(link.path, sourcePath);
-      const matches33 = labels.filter((label) => label.textContent.trim() === link.label);
+      const expected = normalizeMessage(link.label);
+      const matches33 = labels.filter((label) => normalizeMessage(label.textContent) === expected);
       for (const label of matches33) {
         label.dataset.obsidianLink = link.path;
         label.dataset.obsidianTarget = "domain";

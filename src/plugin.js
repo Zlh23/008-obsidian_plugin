@@ -169,9 +169,11 @@ class TreeDisplayPlugin extends Plugin {
   bindSequenceInterfaceLinks(svg, links, sourcePath) {
     if (!links.length) return;
     const labels = [...svg.querySelectorAll(".messageText")];
+    const normalizeMessage = (value) => String(value || "").replace(/\s+/g, " ").trim();
     for (const link of links) {
       const color = this.domainColor(link.path, sourcePath);
-      const matches = labels.filter((label) => label.textContent.trim() === link.label);
+      const expected = normalizeMessage(link.label);
+      const matches = labels.filter((label) => normalizeMessage(label.textContent) === expected);
       for (const label of matches) {
         label.dataset.obsidianLink = link.path;
         label.dataset.obsidianTarget = "domain";
