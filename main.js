@@ -158799,6 +158799,7 @@ var TreeDisplayPlugin = class extends Plugin {
           if (rawSource.includes("@link-domain") || rawSource.includes("@link-module")) {
             this.styleDomainDataFlows(svg2, id28);
           }
+          this.ensureSequenceArrows(svg2, dark);
         }
         this.bindControlledMermaidLinks(el, rawSource, ctx?.sourcePath);
         if (svg2 && rawSource.includes("@link-module")) {
@@ -159050,6 +159051,42 @@ ${details}` });
         path3.setAttribute("marker-end", `url(#${clonedId})`);
       }
     });
+  }
+  ensureSequenceArrows(svg2, dark) {
+    const namespace = "http://www.w3.org/2000/svg";
+    let defs2 = svg2.querySelector("defs");
+    if (!defs2) {
+      defs2 = svg2.ownerDocument.createElementNS(namespace, "defs");
+      svg2.prepend(defs2);
+    }
+    const visibleColor = dark ? "#d7dee8" : "#30343b";
+    const markerBySource = /* @__PURE__ */ new Map();
+    const markerSelector = "[marker-end], [marker-start]";
+    for (const line2 of svg2.querySelectorAll(markerSelector)) {
+      for (const attribute of ["marker-start", "marker-end"]) {
+        const markerValue = line2.getAttribute(attribute) || "";
+        const markerId = markerValue.match(/#([^)\'"]+)/)?.[1];
+        if (!markerId) continue;
+        const marker = svg2.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
+        if (!marker) continue;
+        let replacementId = markerBySource.get(markerId);
+        if (!replacementId) {
+          replacementId = `${svg2.id || "controlled-mermaid"}-visible-arrow-${markerBySource.size}`;
+          const replacement = marker.cloneNode(true);
+          replacement.setAttribute("id", replacementId);
+          replacement.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+            shape.setAttribute("fill", visibleColor);
+            shape.setAttribute("stroke", visibleColor);
+            shape.style.setProperty("fill", visibleColor, "important");
+            shape.style.setProperty("stroke", visibleColor, "important");
+            shape.style.setProperty("stroke-width", "1.2px", "important");
+          });
+          defs2.appendChild(replacement);
+          markerBySource.set(markerId, replacementId);
+        }
+        line2.setAttribute(attribute, `url(#${replacementId})`);
+      }
+    }
   }
   async openInNavigationLeaf(path3, target, sourcePath) {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");

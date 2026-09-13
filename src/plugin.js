@@ -68,6 +68,7 @@ class TreeDisplayPlugin extends Plugin {
           if (rawSource.includes("@link-domain") || rawSource.includes("@link-module")) {
             this.styleDomainDataFlows(svg, id);
           }
+          this.ensureSequenceArrows(svg, dark);
         }
         this.bindControlledMermaidLinks(el, rawSource, ctx?.sourcePath);
         if (svg && rawSource.includes("@link-module")) {
@@ -304,6 +305,42 @@ class TreeDisplayPlugin extends Plugin {
         path.setAttribute("marker-end", `url(#${clonedId})`);
       }
     });
+  }
+  ensureSequenceArrows(svg, dark) {
+    const namespace = "http://www.w3.org/2000/svg";
+    let defs = svg.querySelector("defs");
+    if (!defs) {
+      defs = svg.ownerDocument.createElementNS(namespace, "defs");
+      svg.prepend(defs);
+    }
+    const visibleColor = dark ? "#d7dee8" : "#30343b";
+    const markerBySource = new Map();
+    const markerSelector = '[marker-end], [marker-start]';
+    for (const line of svg.querySelectorAll(markerSelector)) {
+      for (const attribute of ["marker-start", "marker-end"]) {
+        const markerValue = line.getAttribute(attribute) || "";
+        const markerId = markerValue.match(/#([^)\'"]+)/)?.[1];
+        if (!markerId) continue;
+        const marker = svg.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
+        if (!marker) continue;
+        let replacementId = markerBySource.get(markerId);
+        if (!replacementId) {
+          replacementId = `${svg.id || "controlled-mermaid"}-visible-arrow-${markerBySource.size}`;
+          const replacement = marker.cloneNode(true);
+          replacement.setAttribute("id", replacementId);
+          replacement.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+            shape.setAttribute("fill", visibleColor);
+            shape.setAttribute("stroke", visibleColor);
+            shape.style.setProperty("fill", visibleColor, "important");
+            shape.style.setProperty("stroke", visibleColor, "important");
+            shape.style.setProperty("stroke-width", "1.2px", "important");
+          });
+          defs.appendChild(replacement);
+          markerBySource.set(markerId, replacementId);
+        }
+        line.setAttribute(attribute, `url(#${replacementId})`);
+      }
+    }
   }
   async openInNavigationLeaf(path, target, sourcePath) {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
