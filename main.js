@@ -158915,7 +158915,7 @@ ${details}` });
         label.classList.add("obsidian-mermaid-link", "obsidian-mermaid-interface");
         label.style.setProperty("fill", color2, "important");
         label.style.setProperty("color", color2, "important");
-        this.styleSequenceMessage(label, color2);
+        this.styleSequenceMessagePrecisely(svg2, label, color2);
         label.setAttribute("tabindex", "0");
         label.setAttribute("role", "link");
         label.setAttribute("aria-label", `\u6253\u5F00\u9886\u57DF\uFF1A${link.path}`);
@@ -158963,6 +158963,45 @@ ${details}` });
         return;
       }
       group2 = group2.parentElement;
+    }
+  }
+  styleSequenceMessagePrecisely(svg2, label, color2) {
+    const lines = [...svg2.querySelectorAll(".messageLine0, .messageLine1")];
+    if (!lines.length) return;
+    let labelY = Number(label.getAttribute("y"));
+    if (!Number.isFinite(labelY)) {
+      try {
+        const box = label.getBBox();
+        labelY = box.y + box.height / 2;
+      } catch (_2) {
+        return;
+      }
+    }
+    const line2 = lines.map((candidate) => {
+      const y1 = Number(candidate.getAttribute("y1"));
+      const y22 = Number(candidate.getAttribute("y2"));
+      return { candidate, distance: Math.abs((y1 + y22) / 2 - labelY) };
+    }).sort((a, b2) => a.distance - b2.distance)[0]?.candidate;
+    if (!line2) return;
+    line2.style.setProperty("stroke", color2, "important");
+    line2.style.setProperty("stroke-width", "2px", "important");
+    for (const attribute of ["marker-start", "marker-end"]) {
+      const markerId = (line2.getAttribute(attribute) || "").match(/#([^)'\"]+)/)?.[1];
+      if (!markerId) continue;
+      const marker = svg2.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
+      if (!marker) continue;
+      const coloredId = `${markerId}-${lines.indexOf(line2)}-${color2.replace("#", "")}`;
+      let coloredMarker = svg2.querySelector(`marker[id="${CSS.escape(coloredId)}"]`);
+      if (!coloredMarker) {
+        coloredMarker = marker.cloneNode(true);
+        coloredMarker.setAttribute("id", coloredId);
+        marker.parentNode.appendChild(coloredMarker);
+      }
+      coloredMarker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+        shape.style.setProperty("fill", color2, "important");
+        shape.style.setProperty("stroke", color2, "important");
+      });
+      line2.setAttribute(attribute, `url(#${coloredId})`);
     }
   }
   domainColor(path3, sourcePath) {
