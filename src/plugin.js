@@ -136,7 +136,7 @@ class TreeDisplayPlugin extends Plugin {
     }
     const svg = el.querySelector("svg");
     if (!svg) return;
-    this.bindSequenceInterfaceLinks(svg, interfaceLinks, sourcePath);
+    this.bindSequenceInterfaceLinks(svg, interfaceLinks, sourcePath, source);
     const groups = [...svg.querySelectorAll("g")];
     for (const link of links) {
       const group = groups.find((candidate) => {
@@ -166,10 +166,28 @@ class TreeDisplayPlugin extends Plugin {
       });
     }
   }
-  bindSequenceInterfaceLinks(svg, links, sourcePath) {
+  bindSequenceInterfaceLinks(svg, links, sourcePath, source) {
     if (!links.length) return;
     const labels = [...svg.querySelectorAll(".messageText")];
     const normalizeMessage = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const participantOrder = [...String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)/gm)].map((m) => m[1]);
+    const pathByParticipant = new Map();
+    for (const link of links) {
+      const line = String(source || "").split("\n").find((entry) => {
+        const match = entry.match(/^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
+        return match && normalizeMessage(match[3]) === normalizeMessage(link.label);
+      });
+      const match = line?.match(/^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)\s*([A-Za-z_][\w-]*)\s*:/);
+      if (match) pathByParticipant.set(match[2], link.path);
+    }
+    const domainParticipants = participantOrder.filter((id) => pathByParticipant.has(id));
+    const boxes = [...svg.querySelectorAll("rect.box")];
+    domainParticipants.forEach((participant, index) => {
+      const box = boxes[index];
+      if (!box) return;
+      box.style.setProperty("fill", this.domainColor(pathByParticipant.get(participant), sourcePath), "important");
+      box.style.setProperty("fill-opacity", "0.12", "important");
+    });
     for (const link of links) {
       const color = this.domainColor(link.path, sourcePath);
       const expected = normalizeMessage(link.label);
