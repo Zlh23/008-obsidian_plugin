@@ -250,6 +250,12 @@
   font-family: var(--font-text), sans-serif;
 }
 
+/* Project diagrams use one box per Domain. Keep the Domain tint subtle so
+   lifelines and ordinary communication lines remain theme-colored. */
+.controlled-mermaid-block .controlled-mermaid-svg .box {
+  fill-opacity: 0.28 !important;
+}
+
 .controlled-mermaid-block .controlled-mermaid-svg g.node,
 .controlled-mermaid-block .controlled-mermaid-svg g[id^="flowchart-"] {
   transition: filter 120ms ease, opacity 120ms ease;
