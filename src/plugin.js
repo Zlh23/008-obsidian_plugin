@@ -170,7 +170,7 @@ class TreeDisplayPlugin extends Plugin {
     if (!links.length) return;
     const labels = [...svg.querySelectorAll(".messageText")];
     for (const link of links) {
-      const color = this.domainColor(link.path, sourcePath);
+      const color = "#ffd43b";
       const matches = labels.filter((label) => label.textContent.trim() === link.label);
       for (const label of matches) {
         label.dataset.obsidianLink = link.path;

@@ -158907,7 +158907,7 @@ ${details}` });
     if (!links3.length) return;
     const labels = [...svg2.querySelectorAll(".messageText")];
     for (const link of links3) {
-      const color2 = this.domainColor(link.path, sourcePath);
+      const color2 = "#ffd43b";
       const matches33 = labels.filter((label) => label.textContent.trim() === link.label);
       for (const label of matches33) {
         label.dataset.obsidianLink = link.path;
