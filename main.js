@@ -158915,6 +158915,7 @@ ${details}` });
         label.classList.add("obsidian-mermaid-link", "obsidian-mermaid-interface");
         label.style.setProperty("fill", color2, "important");
         label.style.setProperty("color", color2, "important");
+        this.styleSequenceMessage(label, color2);
         label.setAttribute("tabindex", "0");
         label.setAttribute("role", "link");
         label.setAttribute("aria-label", `\u6253\u5F00\u9886\u57DF\uFF1A${link.path}`);
@@ -158929,6 +158930,31 @@ ${details}` });
           void this.openInNavigationLeaf(link.path, "domain", sourcePath);
         });
       }
+    }
+  }
+  styleSequenceMessage(label, color2) {
+    let group2 = label.parentElement;
+    while (group2 && group2 !== label.ownerDocument.documentElement) {
+      const lines = group2.querySelectorAll?.(".messageLine0, .messageLine1, line.messageLine0, line.messageLine1") || [];
+      if (lines.length) {
+        for (const line2 of lines) {
+          line2.style.setProperty("stroke", color2, "important");
+          line2.style.setProperty("stroke-width", "2px", "important");
+          for (const attribute of ["marker-start", "marker-end"]) {
+            const value = line2.getAttribute(attribute) || "";
+            const markerId = value.match(/#([^)\'"]+)/)?.[1];
+            if (!markerId) continue;
+            const marker = label.ownerDocument.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
+            if (!marker) continue;
+            marker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+              shape.style.setProperty("fill", color2, "important");
+              shape.style.setProperty("stroke", color2, "important");
+            });
+          }
+        }
+        return;
+      }
+      group2 = group2.parentElement;
     }
   }
   domainColor(path3, sourcePath) {

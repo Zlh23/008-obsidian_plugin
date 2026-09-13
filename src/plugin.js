@@ -178,6 +178,7 @@ class TreeDisplayPlugin extends Plugin {
         label.classList.add("obsidian-mermaid-link", "obsidian-mermaid-interface");
         label.style.setProperty("fill", color, "important");
         label.style.setProperty("color", color, "important");
+        this.styleSequenceMessage(label, color);
         label.setAttribute("tabindex", "0");
         label.setAttribute("role", "link");
         label.setAttribute("aria-label", `打开领域：${link.path}`);
@@ -192,6 +193,33 @@ class TreeDisplayPlugin extends Plugin {
           void this.openInNavigationLeaf(link.path, "domain", sourcePath);
         });
       }
+    }
+  }
+  styleSequenceMessage(label, color) {
+    // Mermaid places the message label and its line in the same message group.
+    // Find that group instead of guessing a generated element id.
+    let group = label.parentElement;
+    while (group && group !== label.ownerDocument.documentElement) {
+      const lines = group.querySelectorAll?.(".messageLine0, .messageLine1, line.messageLine0, line.messageLine1") || [];
+      if (lines.length) {
+        for (const line of lines) {
+          line.style.setProperty("stroke", color, "important");
+          line.style.setProperty("stroke-width", "2px", "important");
+          for (const attribute of ["marker-start", "marker-end"]) {
+            const value = line.getAttribute(attribute) || "";
+            const markerId = value.match(/#([^)\'"]+)/)?.[1];
+            if (!markerId) continue;
+            const marker = label.ownerDocument.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
+            if (!marker) continue;
+            marker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+              shape.style.setProperty("fill", color, "important");
+              shape.style.setProperty("stroke", color, "important");
+            });
+          }
+        }
+        return;
+      }
+      group = group.parentElement;
     }
   }
   domainColor(path, sourcePath) {
