@@ -158917,7 +158917,8 @@ ${details}` });
         label.classList.add("obsidian-mermaid-link", "obsidian-mermaid-interface");
         label.style.setProperty("fill", color2, "important");
         label.style.setProperty("color", color2, "important");
-        this.styleSequenceMessagePrecisely(svg2, label, color2);
+        const messageIndex = labels.indexOf(label);
+        this.styleSequenceMessageByIndex(svg2, messageIndex, color2);
         label.setAttribute("tabindex", "0");
         label.setAttribute("role", "link");
         label.setAttribute("aria-label", `\u6253\u5F00\u9886\u57DF\uFF1A${link.path}`);
@@ -158993,6 +158994,31 @@ ${details}` });
       const marker = svg2.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
       if (!marker) continue;
       const coloredId = `${markerId}-${lines.indexOf(line2)}-${color2.replace("#", "")}`;
+      let coloredMarker = svg2.querySelector(`marker[id="${CSS.escape(coloredId)}"]`);
+      if (!coloredMarker) {
+        coloredMarker = marker.cloneNode(true);
+        coloredMarker.setAttribute("id", coloredId);
+        marker.parentNode.appendChild(coloredMarker);
+      }
+      coloredMarker.querySelectorAll("path, polygon, polyline").forEach((shape) => {
+        shape.style.setProperty("fill", color2, "important");
+        shape.style.setProperty("stroke", color2, "important");
+      });
+      line2.setAttribute(attribute, `url(#${coloredId})`);
+    }
+  }
+  styleSequenceMessageByIndex(svg2, messageIndex, color2) {
+    const lines = [...svg2.querySelectorAll(".messageLine0, .messageLine1")];
+    const line2 = lines[messageIndex];
+    if (!line2) return;
+    line2.style.setProperty("stroke", color2, "important");
+    line2.style.setProperty("stroke-width", "2px", "important");
+    for (const attribute of ["marker-start", "marker-end"]) {
+      const markerId = (line2.getAttribute(attribute) || "").match(/#([^)'\"]+)/)?.[1];
+      if (!markerId) continue;
+      const marker = svg2.querySelector(`marker[id="${CSS.escape(markerId)}"]`);
+      if (!marker) continue;
+      const coloredId = `${markerId}-message-${messageIndex}-${color2.replace("#", "")}`;
       let coloredMarker = svg2.querySelector(`marker[id="${CSS.escape(coloredId)}"]`);
       if (!coloredMarker) {
         coloredMarker = marker.cloneNode(true);
