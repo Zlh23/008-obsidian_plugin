@@ -98,11 +98,11 @@
   opacity: 0.65;
 }
 .callout[data-callout="usb-method"] {
-  --callout-color: 52, 183, 89;
+  --callout-color: var(--text-normal);
   --callout-icon: code-2;
   margin: 0.8rem 0;
-  border: 1px solid rgba(var(--callout-color), 0.55);
-  border-left: 4px solid rgb(var(--callout-color));
+  border: 1px solid var(--text-normal);
+  border-left: 4px solid var(--text-normal);
   border-radius: 0.65rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -114,7 +114,7 @@
   padding: 0.2rem 1rem 1rem;
 }
 .callout[data-callout="usb-method"] > .callout-title:hover {
-  background: rgba(var(--callout-color), 0.08);
+  background: color-mix(in srgb, var(--text-normal) 8%, transparent);
 }
 .callout[data-callout="usb-method"] .callout-title-inner {
   line-height: 1.35;
@@ -122,6 +122,40 @@
 .callout[data-callout="usb-method"] .callout-title-inner small {
   display: block;
   margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+.callout[data-callout="usb-interface"] {
+  --callout-color: 77, 163, 255;
+  --usb-interface-color: var(--domain-color, rgb(var(--callout-color)));
+  --callout-icon: plug-zap;
+  margin: 0.8rem 0;
+  border: 1px solid color-mix(in srgb, var(--usb-interface-color) 55%, transparent);
+  border-left: 4px solid var(--usb-interface-color);
+  border-radius: 0.65rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.callout[data-callout="usb-interface"] > .callout-title {
+  padding: 0.75rem 1rem;
+}
+.callout[data-callout="usb-interface"] > .callout-content {
+  padding: 0.2rem 1rem 1rem;
+}
+.callout[data-callout="usb-interface"] > .callout-title:hover {
+  background: color-mix(in srgb, var(--usb-interface-color) 8%, transparent);
+}
+.callout[data-callout="usb-interface"] .callout-title-inner {
+  line-height: 1.35;
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.callout[data-callout="usb-interface"] .callout-title-inner small {
+  display: inline;
+  margin-top: 0;
   color: var(--text-muted);
   font-size: 0.82rem;
   font-weight: 400;
@@ -136,6 +170,26 @@
 }
 .obsidian-mermaid-link {
   cursor: pointer;
+}
+
+.obsidian-mermaid-type-token {
+  color: var(--link-color) !important;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.obsidian-mermaid-type-token:hover,
+.obsidian-mermaid-type-token:focus {
+  filter: brightness(1.25);
+  outline: none;
+}
+
+.workspace-leaf-content[data-tree-view-navigation-target] .view-header-title-container::after {
+  content: " · " attr(data-tree-view-navigation-target);
+  color: var(--text-muted);
+  font-size: 0.75em;
+  font-weight: 500;
+  text-transform: capitalize;
 }
 
 .controlled-mermaid-block .obsidian-mermaid-interface {
@@ -197,16 +251,23 @@
   justify-content: center;
   width: 100%;
   max-width: 100%;
-  margin: 0;
+  margin: 0.75rem 0;
   padding: 0;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.controlled-mermaid-block.controlled-mermaid-project {
+  margin: 0;
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
 }
 
 .controlled-mermaid-block .controlled-mermaid-svg {
@@ -219,12 +280,12 @@
   margin: auto;
 }
 
-.markdown-preview-view.controlled-mermaid-preview:has(.controlled-mermaid-block) {
+.markdown-preview-view.controlled-mermaid-preview:has(.controlled-mermaid-project) {
   overflow: hidden !important;
   padding: 0 !important;
 }
 
-.markdown-preview-view.controlled-mermaid-preview:has(.controlled-mermaid-block) .controlled-mermaid-sizer {
+.markdown-preview-view.controlled-mermaid-preview:has(.controlled-mermaid-project) .controlled-mermaid-sizer {
   display: flex !important;
   flex-direction: column;
   width: 100% !important;
@@ -236,7 +297,7 @@
   padding: 0 !important;
 }
 
-.markdown-preview-view.controlled-mermaid-preview:has(.controlled-mermaid-block) .controlled-mermaid-fill-parent {
+.markdown-preview-view.controlled-mermaid-preview:has(.controlled-mermaid-project) .controlled-mermaid-fill-parent {
   display: flex;
   flex: 1 1 auto;
   width: 100%;
@@ -254,6 +315,26 @@
    lifelines and ordinary communication lines remain theme-colored. */
 .controlled-mermaid-block .controlled-mermaid-svg .box {
   fill-opacity: 0.28 !important;
+}
+
+.controlled-domain-description h1 {
+  color: var(--domain-color) !important;
+}
+
+.controlled-domain-description p {
+  color: var(--text-normal) !important;
+}
+
+.controlled-domain-link {
+  color: var(--domain-color) !important;
+  text-decoration-color: var(--domain-color) !important;
+}
+
+.controlled-test-checkbox {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--interactive-accent);
 }
 
 .controlled-mermaid-block .controlled-mermaid-svg g.node,
@@ -322,4 +403,26 @@
 .obsidian-mermaid-link:hover .label,
 .obsidian-mermaid-link:hover .nodeLabel {
   text-decoration: underline;
+}
+
+.tree-view-navigation-marker {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.68em;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.tree-view-fixed-navigation-tabs .workspace-tab-header-new-tab,
+.tree-view-fixed-navigation-tabs .workspace-tab-header-new-tab-button,
+.workspace-tab-header-container:has([data-tree-view-navigation-target]) .workspace-tab-header-new-tab,
+.workspace-tab-header-container:has([data-tree-view-navigation-target]) .workspace-tab-header-new-tab-button,
+.workspace-tab-header-container:has(.tree-view-navigation-marker) .workspace-tab-header-new-tab,
+.workspace-tab-header-container:has(.tree-view-navigation-marker) .workspace-tab-header-new-tab-button {
+  display: none !important;
 }

@@ -1,6 +1,10 @@
-const { Plugin } = require('obsidian');
+const { Plugin, Notice } = require('obsidian');
 const mermaidModule = require('mermaid');
 const navigation = require('./core/lifecycle');
+
+const NAVIGATION_TARGETS = ['project', 'environment', 'domain', 'module', 'type'];
+const NAVIGATION_LAYOUT_VERSION = "4";
+
 class TreeDisplayPlugin extends Plugin {
   async onload() {
     const renderer = mermaidModule.default || mermaidModule;
@@ -8,9 +12,20 @@ class TreeDisplayPlugin extends Plugin {
       throw new Error(`官方 Mermaid 导出异常：${Object.keys(renderer).join(", ")}`);
     }
     this.mermaid = renderer;
-    this.navigationLeaves = { domain: null, module: null };
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
     this.domainColorAssignments = new Map();
     this.nextDomainColor = 0;
+    this.addCommand({
+      id: "open-navigation-leaves",
+      name: "Open Navigation Leaves",
+      callback: () => void this.ensureNavigationLeaves(),
+    });
+    this.addCommand({
+      id: "close-navigation-leaves",
+      name: "Close Navigation Leaves",
+      callback: () => this.closeNavigationLeaves(),
+    });
     this.registerMarkdownCodeBlockProcessor("controlled-mermaid", async (source, el, ctx) => {
       const id = `controlled-mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       try {
@@ -32,13 +47,29 @@ class TreeDisplayPlugin extends Plugin {
         el.style.maxWidth = "100%";
         el.style.overflow = "hidden";
         el.classList.add("controlled-mermaid-block");
+        const isProjectDocument = /(^|\/)\_\_Project\.md$/.test(String(ctx?.sourcePath || ""));
+        el.classList.toggle("controlled-mermaid-project", isProjectDocument);
         const previewView = el.closest(".markdown-preview-view");
         const previewSizer = el.closest(".markdown-preview-sizer");
-        for (let parent = el.parentElement; parent && parent !== previewView; parent = parent.parentElement) {
-          parent.classList.add("controlled-mermaid-fill-parent");
+        const sourceDir = String(ctx?.sourcePath || "").replace(/\/[^/]*$/, "");
+        for (const description of previewView?.querySelectorAll?.(".controlled-domain-description[data-domain]") || []) {
+          const domainPath = `${sourceDir}/${description.dataset.domain}.md`;
+          description.style.setProperty("--domain-color", this.domainColor(domainPath, ctx?.sourcePath), "important");
         }
-        previewView?.classList.add("controlled-mermaid-preview");
-        previewSizer?.classList.add("controlled-mermaid-sizer");
+        const interfaceCard = el.closest?.('.callout[data-callout="usb-interface"]');
+        if (interfaceCard && ctx?.sourcePath) {
+          interfaceCard.style.setProperty("--domain-color", this.domainColor(ctx.sourcePath, ctx.sourcePath), "important");
+        }
+        if (isProjectDocument) {
+          for (let parent = el.parentElement; parent && parent !== previewView; parent = parent.parentElement) {
+            parent.classList.add("controlled-mermaid-fill-parent");
+          }
+          previewView?.classList.add("controlled-mermaid-preview");
+          previewSizer?.classList.add("controlled-mermaid-sizer");
+        } else {
+          previewView?.classList.remove("controlled-mermaid-preview");
+          previewSizer?.classList.remove("controlled-mermaid-sizer");
+        }
         el.innerHTML = rendered.svg;
         rendered.bindFunctions?.(el);
         const svg = el.querySelector("svg");
@@ -52,7 +83,7 @@ class TreeDisplayPlugin extends Plugin {
           const naturalHeight = Math.max(1, viewBox?.height || 1);
           const fitSvg = () => {
             const availableWidth = Math.max(1, el.clientWidth);
-            const availableHeight = Math.max(1, el.clientHeight);
+            const availableHeight = isProjectDocument ? Math.max(1, el.clientHeight) : naturalHeight;
             const scale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
             svg.style.width = `${Math.floor(naturalWidth * scale)}px`;
             svg.style.height = `${Math.floor(naturalHeight * scale)}px`;
@@ -65,13 +96,12 @@ class TreeDisplayPlugin extends Plugin {
             observer.observe(el);
             this.register(() => observer.disconnect());
           }
-          if (rawSource.includes("@link-domain") || rawSource.includes("@link-module")) {
-            this.styleDomainDataFlows(svg, id);
-          }
           this.ensureSequenceArrows(svg, dark);
         }
-        this.bindControlledMermaidLinks(el, rawSource, ctx?.sourcePath);
-        if (svg && rawSource.includes("@link-module")) {
+        if (!this.isModuleDocument(ctx?.sourcePath)) {
+          this.bindControlledMermaidLinks(el, rawSource, ctx?.sourcePath);
+        }
+        if (svg && (rawSource.includes("@link-module") || rawSource.includes("@link-interface"))) {
           this.styleDomainInterfaces(svg, rawSource, ctx?.sourcePath);
         }
       } catch (error) {
@@ -81,7 +111,50 @@ class TreeDisplayPlugin extends Plugin {
         el.createEl("pre", { text: `Mermaid 渲染失败\n${details}` });
       }
     });
+    this.registerMarkdownPostProcessor((element, ctx) => {
+      const sourcePath = String(ctx?.sourcePath || "");
+      const sourceName = sourcePath.split("/").pop() || "";
+      const isEnvironmentDocument = /^_[^/]+-ENV\.md$/i.test(sourceName);
+      if (isEnvironmentDocument) {
+        for (const link of [...element.querySelectorAll("a.internal-link")]) {
+          const target = link.dataset.href || link.getAttribute("href") || "";
+          const resolved = navigation.resolveFile(this.app, target, sourcePath);
+          if (!resolved?.path) continue;
+          const targetName = resolved.path.split("/").pop() || "";
+          if (!targetName.endsWith(".md") || /^_[^/]+-ENV\.md$/i.test(targetName)) continue;
+          link.classList.add("controlled-domain-link");
+          link.style.setProperty("--domain-color", this.domainColor(resolved.path, sourcePath), "important");
+        }
+      }
+      for (const table of [...element.querySelectorAll('.callout[data-callout="usb-interface"] table, .callout[data-callout="usb-method"] table')]) {
+        const header = table.querySelector("thead tr");
+        if (!header || header.cells[0]?.textContent?.trim() !== "测试") continue;
+        const content = table.closest(".callout-content");
+        const lastImplementation = content && [...content.children].filter((child) =>
+          child.matches("pre, .controlled-mermaid-block, .mermaid, .block-language-mermaid"),
+        ).pop();
+        if (lastImplementation && lastImplementation.nextElementSibling !== table) {
+          lastImplementation.after(table);
+        }
+        for (const row of table.querySelectorAll("tbody tr")) {
+          const cell = row.cells[0];
+          if (!cell || cell.querySelector("input[type=checkbox]")) continue;
+          const checked = /\[x\]/i.test(cell.textContent || "");
+          cell.textContent = "";
+          const checkbox = element.ownerDocument.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = checked;
+          checkbox.className = "controlled-test-checkbox";
+          cell.appendChild(checkbox);
+        }
+      }
+      if (!this.isModuleDocument(ctx?.sourcePath)) return;
+      for (const link of [...element.querySelectorAll("a.internal-link")]) {
+        link.replaceWith(element.ownerDocument.createTextNode(link.textContent || ""));
+      }
+    });
     this.registerDomEvent(document, "click", (event) => this.handleMermaidClick(event), true);
+    this.registerDomEvent(document, "click", (event) => this.handleInternalTypeLink(event), true);
     this.registerDomEvent(document, "mouseover", (event) => this.handleMermaidHover(event), true);
     this.lastPointer = null;
     this.registerDomEvent(document, "mousemove", (event) => { this.lastPointer = { x: event.clientX, y: event.clientY }; }, true);
@@ -123,56 +196,111 @@ class TreeDisplayPlugin extends Plugin {
   }
   bindControlledMermaidLinks(el, source, sourcePath) {
     if (sourcePath) el.setAttribute("data-obsidian-source-path", sourcePath);
-    const interfaceLinks = [];
-    for (const match of source.matchAll(/^\s*%%\s*@link-interface\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
-      interfaceLinks.push({
-        label: match[1] || match[2] || match[3],
-        path: match[4] || match[5] || match[6],
+    const links = [];
+    for (const match of source.matchAll(/^\s*%%\s*@link-(project|environment|interface|type)\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
+      links.push({
+        target: match[1],
+        label: match[2] || match[3] || match[4],
+        path: match[5] || match[6] || match[7],
       });
     }
-    const links = [];
     for (const match of source.matchAll(/^\s*%%\s*@link-(domain|module)\s+([^\s]+)\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
       links.push({ target: match[1], id: match[2], path: match[3] || match[4] || match[5] });
     }
     const svg = el.querySelector("svg");
     if (!svg) return;
-    this.bindSequenceInterfaceLinks(svg, interfaceLinks, sourcePath, source);
+    this.bindSequenceInterfaceLinks(svg, links, sourcePath, source);
     const groups = [...svg.querySelectorAll("g")];
     for (const link of links) {
       const group = groups.find((candidate) => {
         const id = candidate.getAttribute("id") || "";
+        const text = (candidate.textContent || "").replace(/\s+/g, " ").trim();
         const matchesNode = candidate.classList.contains("node") &&
-          (id === link.id || id.startsWith(`flowchart-${link.id}-`) || candidate.getAttribute("data-id") === link.id);
+          ((link.id && (id === link.id || id.startsWith(`flowchart-${link.id}-`) || id.includes(`-${link.id}-`) || id.endsWith(`-${link.id}`) || candidate.getAttribute("data-id") === link.id)) ||
+           (link.target === "interface" && link.label && text === link.label));
         if (matchesNode) return true;
         return link.target === "domain" && candidate.classList.contains("cluster") &&
           (id === link.id || id.includes(link.id));
       });
-      if (!group) continue;
-      group.dataset.obsidianLink = link.path;
-      group.dataset.obsidianTarget = link.target;
-      group.classList.add("obsidian-mermaid-link", `obsidian-mermaid-${link.target}`);
-      group.setAttribute("tabindex", "0");
-      group.setAttribute("role", "link");
-      group.setAttribute("aria-label", `打开${link.target === "domain" ? "领域" : "模块"}：${link.path}`);
-      group.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
-      });
-      group.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
-      });
+      const targets = group
+        ? [group]
+        : link.target === "type"
+          ? this.findTypeEdgeTargets(svg, link.label)
+          : link.target === "environment"
+            ? this.findLabeledTextTargets(svg, link.label)
+            : [];
+      for (const target of targets) {
+        target.dataset.obsidianLink = link.path;
+        target.dataset.obsidianTarget = link.target;
+        target.classList.add("obsidian-mermaid-link", `obsidian-mermaid-${link.target}`);
+        target.style.setProperty("cursor", "pointer", "important");
+        if (link.target === "type") {
+          target.style.setProperty("fill", "var(--link-color)", "important");
+          target.style.setProperty("color", "var(--link-color)", "important");
+          target.style.setProperty("text-decoration", "underline", "important");
+        }
+        target.setAttribute("tabindex", "0");
+        target.setAttribute("role", "link");
+        target.setAttribute("aria-label", `打开${this.navigationTargetLabel(this.navigationTargetForLink(link.target))}：${link.path}`);
+        target.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void this.openInNavigationLeaf(link.path, this.navigationTargetForLink(link.target), sourcePath);
+        });
+        target.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          void this.openInNavigationLeaf(link.path, this.navigationTargetForLink(link.target), sourcePath);
+        });
+      }
     }
   }
+  findTypeEdgeTargets(svg, typeName) {
+    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const matches = [...svg.querySelectorAll(".edgeLabel")].filter((edgeLabel) => {
+      const value = normalize(edgeLabel.textContent);
+      return value === typeName || new RegExp(`(?:^|[\\s:])${typeName}$`).test(value);
+    });
+    return matches.map((edgeLabel) => this.linkOnlyTypeText(edgeLabel, typeName)).filter(Boolean);
+  }
+  findLabeledTextTargets(svg, label) {
+    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    return [...svg.querySelectorAll("text, .boxText, .labelText")].filter((candidate) =>
+      normalize(candidate.textContent) === normalize(label),
+    );
+  }
+  linkOnlyTypeText(edgeLabel, typeName) {
+    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const fullText = normalize(edgeLabel.textContent);
+    const htmlLeaf = [...edgeLabel.querySelectorAll("span, p")].find((candidate) =>
+      normalize(candidate.textContent) === fullText && !candidate.querySelector("span, p"));
+    if (!htmlLeaf) return edgeLabel;
+    const rawText = htmlLeaf.textContent || "";
+    const start = rawText.lastIndexOf(typeName);
+    if (start < 0 || rawText.slice(start + typeName.length).trim()) return edgeLabel;
+    const document = edgeLabel.ownerDocument;
+    const type = document.createElement("span");
+    type.textContent = typeName;
+    type.classList.add("obsidian-mermaid-type-token");
+    htmlLeaf.replaceChildren(
+      document.createTextNode(rawText.slice(0, start)),
+      type,
+      document.createTextNode(rawText.slice(start + typeName.length)),
+    );
+    return type;
+  }
   bindSequenceInterfaceLinks(svg, links, sourcePath, source) {
-    if (!links.length) return;
+    const domainLinks = links.filter((link) => link.target === "domain");
+    const interfaceLinks = links.filter((link) => link.target === "interface");
+    if (!domainLinks.length && !interfaceLinks.length) return;
     const labels = [...svg.querySelectorAll(".messageText")];
     const normalizeMessage = (value) => String(value || "").replace(/\s+/g, " ").trim();
     const participantOrder = [...String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)/gm)].map((m) => m[1]);
     const pathByParticipant = new Map();
-    for (const link of links) {
+    for (const link of domainLinks) {
+      pathByParticipant.set(link.id, link.path);
+    }
+    for (const link of interfaceLinks) {
       const line = String(source || "").split("\n").find((entry) => {
         const match = entry.match(/^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
         return match && normalizeMessage(match[3]) === normalizeMessage(link.label);
@@ -180,7 +308,7 @@ class TreeDisplayPlugin extends Plugin {
       const match = line?.match(/^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)\s*([A-Za-z_][\w-]*)\s*:/);
       if (match) pathByParticipant.set(match[2], link.path);
     }
-    const domainParticipants = participantOrder.filter((id) => pathByParticipant.has(id));
+    const domainParticipants = participantOrder.filter((id) => id !== "USER" && pathByParticipant.has(id));
     const boxes = [...svg.querySelectorAll("rect.box")];
     domainParticipants.forEach((participant, index) => {
       const box = boxes[index];
@@ -189,31 +317,138 @@ class TreeDisplayPlugin extends Plugin {
       box.style.setProperty("fill-opacity", "0.12", "important");
     });
     this.styleSequenceParticipants(svg, pathByParticipant, sourcePath, source);
-    for (const link of links) {
+    for (const link of interfaceLinks) {
       const color = this.domainColor(link.path, sourcePath);
       const expected = normalizeMessage(link.label);
       const matches = labels.filter((label) => normalizeMessage(label.textContent) === expected);
       for (const label of matches) {
-        label.dataset.obsidianLink = link.path;
-        label.dataset.obsidianTarget = "domain";
-        label.classList.add("obsidian-mermaid-link", "obsidian-mermaid-interface");
         label.style.setProperty("fill", color, "important");
         label.style.setProperty("color", color, "important");
         const messageIndex = labels.indexOf(label);
         this.styleSequenceMessageByIndex(svg, messageIndex, color);
-        label.setAttribute("tabindex", "0");
-        label.setAttribute("role", "link");
-        label.setAttribute("aria-label", `打开领域：${link.path}`);
-        label.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void this.openInNavigationLeaf(link.path, "domain", sourcePath);
+      }
+    }
+    this.styleSequenceCallsByTarget(svg, source, pathByParticipant, sourcePath);
+    this.styleSequenceActivations(svg, pathByParticipant, sourcePath);
+  }
+  styleSequenceCallsByTarget(svg, source, pathByParticipant, sourcePath) {
+    const labels = [...svg.querySelectorAll(".messageText")];
+    const lines = [...svg.querySelectorAll(".messageLine0, .messageLine1")];
+    const messagePattern = /^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)[+-]?\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/;
+    const messages = String(source || "").split("\n").map((line) => line.match(messagePattern)).filter(Boolean);
+    if (messages.length !== labels.length || messages.length !== lines.length) return;
+    for (const [index, match] of messages.entries()) {
+      const [, , target] = match;
+      const path = pathByParticipant.get(target);
+      if (!path) continue;
+      const color = this.domainColor(path, sourcePath);
+      const label = labels[index];
+      label.style.setProperty("fill", color, "important");
+      label.style.setProperty("color", color, "important");
+      this.styleSequenceMessageByIndex(svg, index, color);
+    }
+  }
+  styleSequenceActivations(svg, pathByParticipant, sourcePath) {
+    const actorLines = [...svg.querySelectorAll("line.actor-line")];
+    const activations = [...svg.querySelectorAll("rect.activation0, rect.activation1, rect.activation2")];
+    for (const activation of activations) {
+      const center = Number(activation.getAttribute("x")) + Number(activation.getAttribute("width")) / 2;
+      if (!Number.isFinite(center)) continue;
+      const actorLine = actorLines.map((line) => ({
+        line,
+        distance: Math.abs(Number(line.getAttribute("x1")) - center),
+      })).sort((left, right) => left.distance - right.distance)[0]?.line;
+      if (!actorLine) continue;
+      const actorX = Number(actorLine.getAttribute("x1"));
+      const participant = [...pathByParticipant.keys()].find((id) => {
+        const line = actorLines.find((candidate) => {
+          const value = candidate.getAttribute("name") || candidate.getAttribute("data-name") || "";
+          return value === id || value.includes(id);
         });
-        label.addEventListener("keydown", (event) => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          event.preventDefault();
-          void this.openInNavigationLeaf(link.path, "domain", sourcePath);
-        });
+        return line && Math.abs(Number(line.getAttribute("x1")) - actorX) < 2;
+      });
+      const path = participant ? pathByParticipant.get(participant) : null;
+      if (!path) continue;
+      const color = this.domainColor(path, sourcePath);
+      activation.style.setProperty("fill", color, "important");
+      activation.style.setProperty("fill-opacity", "0.18", "important");
+      activation.style.setProperty("stroke", color, "important");
+      activation.style.setProperty("stroke-width", "2px", "important");
+    }
+  }
+  renderSequenceInterfaceMarkers(svg, source, pathByParticipant, sourcePath) {
+    const bindings = [];
+    for (const match of String(source || "").matchAll(/^\s*%%\s*@domain-interface\s+([A-Za-z_][\w-]*)\s+(?:"([^"]+)"|'([^']+)')\s+(?:"([^"]+)"|'([^']+)')\s*$/gm)) {
+      bindings.push({ participant: match[1], name: match[2] || match[3], reason: match[4] || match[5] });
+    }
+    if (!bindings.length) return;
+    const labels = [...svg.querySelectorAll(".messageText")];
+    const lines = [...svg.querySelectorAll(".messageLine0, .messageLine1")];
+    const actorLines = [...svg.querySelectorAll("line.actor-line")];
+    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const participantNames = new Map();
+    for (const match of String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)\s+as\s+(.+)$/gm)) {
+      participantNames.set(match[1], match[2].trim());
+    }
+    const usedLabels = new Set();
+    const interfaces = new Map();
+    for (const binding of bindings) {
+      const path = pathByParticipant.get(binding.participant);
+      if (!path) continue;
+      const name = participantNames.get(binding.participant) || binding.participant;
+      const actorLine = actorLines.find((line) => {
+        const value = line.getAttribute("name") || line.getAttribute("data-name") || "";
+        return value === binding.participant || value === name || value.includes(binding.participant) || value.includes(name);
+      });
+      if (!actorLine) continue;
+      const label = labels.find((candidate) => !usedLabels.has(candidate) && normalize(candidate.textContent) === normalize(binding.reason));
+      if (!label) continue;
+      usedLabels.add(label);
+      let y = Number(label.getAttribute("y"));
+      if (!Number.isFinite(y)) {
+        try { const box = label.getBBox(); y = box.y + box.height / 2; } catch (_) { continue; }
+      }
+      const x = Number(actorLine.getAttribute("x1"));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      const key = `${binding.participant}\u0000${binding.name}`;
+      const current = interfaces.get(key) || {
+        participant: binding.participant, name: binding.name, path, x, ys: [], messageIndexes: [],
+      };
+      current.ys.push(y);
+      current.messageIndexes.push(labels.indexOf(label));
+      interfaces.set(key, current);
+    }
+    for (const entry of interfaces.values()) {
+      const name = participantNames.get(entry.participant) || entry.participant;
+      const color = this.domainColor(entry.path, sourcePath);
+      const width = Math.max(56, Math.min(132, 20 + entry.name.length * 14));
+      const top = Math.min(...entry.ys) - 13;
+      const bottom = Math.max(...entry.ys) + 13;
+      const height = Math.max(26, bottom - top);
+      const group = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+      group.classList.add("controlled-mermaid-sequence-interface");
+      group.setAttribute("aria-label", `${name} 接口：${entry.name}`);
+      const rect = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", String(entry.x - width / 2));
+      rect.setAttribute("y", String(top));
+      rect.setAttribute("width", String(width));
+      rect.setAttribute("height", String(height));
+      rect.setAttribute("rx", "2");
+      rect.style.setProperty("fill", "var(--background-primary)", "important");
+      rect.style.setProperty("stroke", color, "important");
+      rect.style.setProperty("stroke-width", "2px", "important");
+      const text = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", String(entry.x));
+      text.setAttribute("y", String(top + 18));
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-size", "13");
+      text.style.setProperty("fill", color, "important");
+      text.style.setProperty("font-weight", "700", "important");
+      text.textContent = entry.name;
+      group.append(rect, text);
+      svg.appendChild(group);
+      for (const messageIndex of entry.messageIndexes) {
+        if (messageIndex >= 0 && lines[messageIndex]) this.styleSequenceMessageByIndex(svg, messageIndex, color);
       }
     }
   }
@@ -224,22 +459,80 @@ class TreeDisplayPlugin extends Plugin {
     }
     const actorLines = [...svg.querySelectorAll("line.actor-line")];
     const actorShapes = [...svg.querySelectorAll("rect.actor, rect.actor-top, rect.actor-bottom")];
+    const userLine = actorLines.find((candidate) => {
+      const value = candidate.getAttribute("name") || candidate.getAttribute("data-name") || "";
+      return value === "USER" || value.includes("USER") || value.includes("用户");
+    });
+    if (userLine) {
+      const userX = Number(userLine.getAttribute("x1"));
+      const userColor = "#ffffff";
+      userLine.style.setProperty("stroke", userColor, "important");
+      userLine.style.setProperty("stroke-width", "2px", "important");
+      for (const shape of actorShapes) {
+        const center = Number(shape.getAttribute("x")) + Number(shape.getAttribute("width")) / 2;
+        if (Math.abs(center - userX) > 2) continue;
+        shape.style.setProperty("fill", "transparent", "important");
+        shape.style.setProperty("stroke", userColor, "important");
+        shape.querySelectorAll("text, tspan").forEach((text) => text.style.setProperty("fill", userColor, "important"));
+      }
+      svg.querySelectorAll("text, tspan").forEach((text) => {
+        const textX = Number(text.getAttribute("x"));
+        if (Number.isFinite(textX) && Math.abs(textX - userX) <= 2) text.style.setProperty("fill", userColor, "important");
+      });
+    }
     for (const [participant, path] of pathByParticipant) {
+      if (participant === "USER") continue;
       const name = participantNames.get(participant);
-      const line = actorLines.find((candidate) => candidate.getAttribute("name") === name);
+      const line = actorLines.find((candidate) => {
+        const lineName = candidate.getAttribute("name") || candidate.getAttribute("data-name") || "";
+        return lineName === name || lineName === participant || lineName.includes(participant) || lineName.includes(name);
+      });
       if (!line) continue;
       const x = Number(line.getAttribute("x1"));
       const color = this.domainColor(path, sourcePath);
+      line.style.setProperty("stroke", color, "important");
+      line.style.setProperty("stroke-width", "2px", "important");
       for (const shape of actorShapes) {
         const center = Number(shape.getAttribute("x")) + Number(shape.getAttribute("width")) / 2;
         if (Math.abs(center - x) > 2) continue;
-        shape.style.setProperty("fill", color, "important");
+        shape.style.setProperty("fill", "transparent", "important");
         shape.style.setProperty("stroke", color, "important");
+        shape.classList.add("obsidian-mermaid-link", "obsidian-mermaid-domain-header");
+        shape.dataset.obsidianLink = path;
+        shape.dataset.obsidianTarget = "domain";
+        shape.setAttribute("tabindex", "0");
+        shape.setAttribute("role", "link");
+        shape.setAttribute("aria-label", `打开领域：${path}`);
+        const openDomain = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void this.openInNavigationLeaf(path, "domain", sourcePath);
+        };
+        shape.addEventListener("click", openDomain);
+        shape.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") openDomain(event);
+        });
         const parent = shape.parentElement;
         parent?.querySelectorAll("text, tspan, .text").forEach((text) => {
           text.style.setProperty("fill", color, "important");
           text.style.setProperty("color", color, "important");
         });
+      }
+      for (const text of svg.querySelectorAll("text, tspan")) {
+        const textX = Number(text.getAttribute("x"));
+        if (Number.isFinite(textX) && Math.abs(textX - x) <= 2) {
+          text.style.setProperty("fill", color, "important");
+          text.style.setProperty("color", color, "important");
+          text.classList.add("obsidian-mermaid-link", "obsidian-mermaid-domain-header");
+          text.dataset.obsidianLink = path;
+          text.dataset.obsidianTarget = "domain";
+          text.style.setProperty("cursor", "pointer", "important");
+          text.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void this.openInNavigationLeaf(path, "domain", sourcePath);
+          });
+        }
       }
     }
   }
@@ -358,11 +651,20 @@ class TreeDisplayPlugin extends Plugin {
   styleDomainInterfaces(svg, source, sourcePath) {
     if (!sourcePath) return;
     const graphSource = source.replace(/^\s*%%.*$/gm, "");
-    const interfaceIds = new Set(
-      [...graphSource.matchAll(/\b([A-Za-z_][\w-]*)\s*\[\[[^\]]/g)].map((match) => match[1]),
+    const interfaceOwners = new Map();
+    for (const match of source.matchAll(/^\s*%%\s*@link-interface\s+(?:([^\s]+)\s+)?(?:"([^"]+)"|'([^']+)'|([^\s]+))\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
+      const id = match[1] || match[2] || match[3] || match[4];
+      const path = match[5] || match[6] || match[7];
+      if (id) interfaceOwners.set(id, path);
+    }
+    const interfaceIds = new Set([
+      ...[...graphSource.matchAll(/\b([A-Za-z_][\w-]*)\s*\[\[[^\]]/g)].map((match) => match[1]),
+      ...interfaceOwners.keys(),
+    ]);
+    const moduleIds = new Set(
+      [...source.matchAll(/^\s*%%\s*@link-module\s+([A-Za-z_][\w-]*)\s+/gm)].map((match) => match[1]),
     );
-    if (!interfaceIds.size) return;
-    const color = this.domainColorForKey(sourcePath);
+    if (!interfaceIds.size && !moduleIds.size) return;
     // Module clusters use Mermaid's current theme. Domain color belongs only
     // to the boundary interfaces, never to the module container or methods.
     for (const cluster of svg.querySelectorAll("g.cluster")) {
@@ -383,10 +685,12 @@ class TreeDisplayPlugin extends Plugin {
     for (const interfaceId of interfaceIds) {
       const node = nodes.find((candidate) => {
         const id = candidate.getAttribute("id") || "";
+        const text = (candidate.textContent || "").replace(/\s+/g, " ").trim();
         return id === interfaceId || id.startsWith(`flowchart-${interfaceId}-`) ||
-          candidate.getAttribute("data-id") === interfaceId;
+          candidate.getAttribute("data-id") === interfaceId || text === interfaceId;
       });
       if (!node) continue;
+        const color = this.domainColor(interfaceOwners.get(interfaceId) || sourcePath, sourcePath);
       node.classList.add("obsidian-mermaid-domain-interface");
       node.style.setProperty("--domain-color", color);
       const shapes = node.querySelectorAll("rect, polygon, path, circle, ellipse, .label-container");
@@ -485,24 +789,199 @@ class TreeDisplayPlugin extends Plugin {
       }
     }
   }
-  async openInNavigationLeaf(path, target, sourcePath) {
+  navigationTargetForLink(target) {
+    return target === "interface" ? "domain" : NAVIGATION_TARGETS.includes(target) ? target : "domain";
+  }
+  navigationTargetLabel(target) {
+    return {
+      project: "项目",
+      environment: "环境",
+      domain: "领域",
+      module: "模块",
+      type: "类型",
+    }[target] || "文档";
+  }
+  isModuleDocument(sourcePath) {
+    const parts = String(sourcePath || "").split("/").filter(Boolean);
+    return parts.length >= 3 && /-ENV$/i.test(parts[parts.length - 3]);
+  }
+  findNavigationLeaf(target) {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
-    let leaf = this.navigationLeaves[target];
-    if (!leaf || !markdownLeaves.includes(leaf)) {
-      leaf = markdownLeaves.find((candidate) =>
-        candidate.containerEl?.dataset.treeViewNavigationTarget === target,
-      );
-    }
-    if (!leaf) {
-      leaf = this.app.workspace.getLeaf("split", "vertical");
-      this.navigationLeaves[target] = leaf;
-    }
+    const remembered = this.navigationLeaves[target];
+    if (remembered?.containerEl?.isConnected) return remembered;
+    return markdownLeaves.find((candidate) =>
+      candidate.containerEl?.dataset.treeViewNavigationTarget === target ||
+      candidate.tabHeaderEl?.dataset.treeViewNavigationTarget === target,
+    ) || null;
+  }
+  assignNavigationLeaf(leaf, target) {
+    if (!leaf) return null;
     this.navigationLeaves[target] = leaf;
-    if (leaf.containerEl) leaf.containerEl.dataset.treeViewNavigationTarget = target;
-    return navigation.openFileInLeaf(this.app, path, leaf, sourcePath);
+    if (leaf.containerEl) {
+      leaf.containerEl.dataset.treeViewNavigationTarget = target;
+      leaf.containerEl.dataset.treeViewNavigationVersion = NAVIGATION_LAYOUT_VERSION;
+    }
+    if (leaf.tabHeaderEl) {
+      leaf.tabHeaderEl.dataset.treeViewNavigationTarget = target;
+      leaf.tabHeaderEl.dataset.treeViewNavigationVersion = NAVIGATION_LAYOUT_VERSION;
+      const tabContainer = leaf.tabHeaderEl.closest(".workspace-tab-header-container");
+      if (tabContainer) {
+        tabContainer.classList.add("tree-view-fixed-navigation-tabs");
+        for (const button of tabContainer.querySelectorAll(
+          ".workspace-tab-header-new-tab, .workspace-tab-header-new-tab-button, [class*='new-tab'], [aria-label*='New tab'], [aria-label*='新建标签']",
+        )) {
+          button.style.setProperty("display", "none", "important");
+        }
+      }
+      let marker = leaf.tabHeaderEl.querySelector(".tree-view-navigation-marker");
+      if (!marker) {
+        marker = leaf.tabHeaderEl.ownerDocument.createElement("span");
+        marker.className = "tree-view-navigation-marker";
+        leaf.tabHeaderEl.appendChild(marker);
+      }
+      marker.textContent = `[${this.navigationTargetLabel(target)}]`;
+      marker.setAttribute("aria-label", `${this.navigationTargetLabel(target)} 固定窗口`);
+    }
+    return leaf;
+  }
+  migrateNavigationLeafOrder() {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    const ownedLeaves = leaves.filter((leaf) =>
+      leaf.containerEl?.dataset.treeViewNavigationTarget,
+    );
+    const needsMigration = ownedLeaves.some((leaf) =>
+      leaf.containerEl?.dataset.treeViewNavigationVersion !== NAVIGATION_LAYOUT_VERSION,
+    );
+    if (!needsMigration) return;
+    for (const leaf of new Set(ownedLeaves)) {
+      if (typeof leaf.detach === "function") leaf.detach();
+    }
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
+  }
+  environmentDescriptorForDomain(file) {
+    if (!file?.path || !file.path.endsWith(".md")) return null;
+    const domain = file.path.split("/").pop().replace(/\.md$/, "");
+    const root = file.path.split("/").slice(0, -1).join("/");
+    const environmentDescriptors = this.app.vault.getMarkdownFiles().filter((candidate) =>
+      candidate.path.startsWith(`${root}/_`) && /-ENV\.md$/i.test(candidate.path),
+    );
+    for (const descriptor of environmentDescriptors) {
+      const environment = descriptor.path.split("/").pop().replace(/\.md$/, "").slice(1);
+      const implementation = this.app.vault.getAbstractFileByPath(`${root}/${environment}/${domain}`);
+      if (implementation?.children) return descriptor;
+    }
+    return null;
+  }
+  async ensureNavigationLeaves() {
+    if (this.navigationLeavesReady) return this.navigationLeavesReady;
+    this.navigationLeavesReady = (async () => {
+      this.migrateNavigationLeafOrder();
+      const reservedLeaves = new Set();
+      // Obsidian inserts a new vertical split on the opposite side of the
+      // current split. Create in reverse so the visible order is stable.
+      for (const target of [...NAVIGATION_TARGETS].reverse()) {
+        const existing = this.findNavigationLeaf(target);
+        if (existing && !reservedLeaves.has(existing)) {
+          this.assignNavigationLeaf(existing, target);
+          reservedLeaves.add(existing);
+          continue;
+        }
+        const projectLeaf = target === "project"
+          ? this.app.workspace.getLeavesOfType("markdown").find((candidate) =>
+            !reservedLeaves.has(candidate) &&
+            /(^|\/)__Project\.md$/.test(String(candidate.view?.file?.path || "")),
+          ) || (() => {
+            const active = this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.leaf;
+            return reservedLeaves.has(active) ? null : active;
+          })()
+          : null;
+        let leaf = projectLeaf || this.app.workspace.getLeaf("split", "vertical");
+        while (reservedLeaves.has(leaf)) {
+          leaf = this.app.workspace.getLeaf("split", "vertical");
+        }
+        this.assignNavigationLeaf(leaf, target);
+        reservedLeaves.add(leaf);
+      }
+    })();
+    try {
+      await this.navigationLeavesReady;
+    } catch (error) {
+      this.navigationLeavesReady = null;
+      throw error;
+    }
+    return this.navigationLeavesReady;
+  }
+  async openInNavigationLeaf(path, target, sourcePath) {
+    const normalizedTarget = this.navigationTargetForLink(target);
+    const leaf = this.findNavigationLeaf(normalizedTarget);
+    if (!leaf) {
+      new Notice("请先执行 Open Navigation Leaves 打开五个固定窗口");
+      return null;
+    }
+    const file = navigation.resolveFile(this.app, path, sourcePath);
+    if (!file) return navigation.openFileInLeaf(this.app, path, leaf, sourcePath);
+    if (normalizedTarget === "domain") {
+      const environmentFile = this.environmentDescriptorForDomain(file);
+      if (environmentFile) {
+        await this.openResolvedFileInNavigationLeaf(environmentFile, "environment");
+      }
+    }
+    return this.openResolvedFileInNavigationLeaf(file, normalizedTarget);
+  }
+  async openResolvedFileInNavigationLeaf(file, target) {
+    const leaf = this.findNavigationLeaf(target);
+    if (!leaf) {
+      new Notice("请先执行 Open Navigation Leaves 打开五个固定窗口");
+      return null;
+    }
+    await leaf.openFile(file);
+    this.assignNavigationLeaf(leaf, target);
+    this.app.workspace.revealLeaf(leaf);
+    if (leaf.view?.file?.path !== file.path) {
+      await leaf.openFile(file);
+      this.app.workspace.revealLeaf(leaf);
+    }
+    return leaf;
+  }
+  closeNavigationLeaves() {
+    const ownedLeaves = new Set([
+      ...Object.values(this.navigationLeaves || {}).filter(Boolean),
+      ...this.app.workspace.getLeavesOfType("markdown").filter((leaf) =>
+        leaf.containerEl?.dataset.treeViewNavigationTarget,
+      ),
+    ]);
+    for (const leaf of ownedLeaves) {
+      if (typeof leaf.detach === "function") leaf.detach();
+    }
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
+  }
+  async handleInternalTypeLink(event) {
+    const link = event.target?.closest?.("a.internal-link, a[data-href]");
+    if (!link || (!link.classList.contains("internal-link") && !link.dataset.href)) return;
+    const leaf = this.app.workspace.getLeavesOfType("markdown").find((candidate) =>
+      candidate.containerEl?.contains(event.target),
+    );
+    const sourcePath = leaf?.view?.file?.path || this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.file?.path;
+    if (!sourcePath) return;
+    const targetPath = link.dataset.href || link.getAttribute("href");
+    const file = navigation.resolveFile(this.app, targetPath, sourcePath);
+    if (!file) return;
+    const sourceName = sourcePath.split("/").pop() || "";
+    const sourceDirectory = sourcePath.slice(0, sourcePath.lastIndexOf("/"));
+    const isEnvironmentDomainLink = /^_[^/]+-ENV\.md$/i.test(sourceName) &&
+      file.path.startsWith(`${sourceDirectory}/`) &&
+      file.path.split("/").length === sourceDirectory.split("/").length + 1 &&
+      !file.path.split("/").pop().startsWith("_");
+    if (!isEnvironmentDomainLink && file.parent?.name !== "Types") return;
+    event.preventDefault();
+    event.stopPropagation();
+    await this.openResolvedFileInNavigationLeaf(file, isEnvironmentDomainLink ? "domain" : "type");
   }
   onunload() {
-    this.navigationLeaves = { domain: null, module: null };
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
   }
   async enhanceMermaidLinks(el, ctx) {
     const sourcePath = ctx?.sourcePath;

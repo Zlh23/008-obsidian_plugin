@@ -158701,10 +158701,10 @@ ${config5.themeCSS}`;
 // src/core/lifecycle.js
 var require_lifecycle = __commonJS({
   "src/core/lifecycle.js"(exports2, module2) {
-    var { Notice, normalizePath } = require("obsidian");
+    var { Notice: Notice2, normalizePath } = require("obsidian");
     async function openFile(app, path3, sourceLeaf, sourcePath) {
       const file = resolveFile(app, path3, sourcePath);
-      if (!file) return new Notice(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
+      if (!file) return new Notice2(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
       let target = app.workspace.getLeavesOfType("markdown").find((leaf) => leaf !== sourceLeaf);
       if (!target) target = app.workspace.getLeaf("split", "vertical");
       await target.openFile(file);
@@ -158723,7 +158723,7 @@ var require_lifecycle = __commonJS({
     }
     async function openFileInLeaf(app, path3, target, sourcePath) {
       const file = resolveFile(app, path3, sourcePath);
-      if (!file) return new Notice(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
+      if (!file) return new Notice2(`\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${String(path3).trim()}`);
       await target.openFile(file);
       app.workspace.revealLeaf(target);
     }
@@ -158732,9 +158732,11 @@ var require_lifecycle = __commonJS({
 });
 
 // src/plugin.js
-var { Plugin } = require("obsidian");
+var { Plugin, Notice } = require("obsidian");
 var mermaidModule = (init_mermaid_core(), __toCommonJS(mermaid_core_exports));
 var navigation = require_lifecycle();
+var NAVIGATION_TARGETS = ["project", "environment", "domain", "module", "type"];
+var NAVIGATION_LAYOUT_VERSION = "4";
 var TreeDisplayPlugin = class extends Plugin {
   async onload() {
     const renderer10 = mermaidModule.default || mermaidModule;
@@ -158742,9 +158744,20 @@ var TreeDisplayPlugin = class extends Plugin {
       throw new Error(`\u5B98\u65B9 Mermaid \u5BFC\u51FA\u5F02\u5E38\uFF1A${Object.keys(renderer10).join(", ")}`);
     }
     this.mermaid = renderer10;
-    this.navigationLeaves = { domain: null, module: null };
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
     this.domainColorAssignments = /* @__PURE__ */ new Map();
     this.nextDomainColor = 0;
+    this.addCommand({
+      id: "open-navigation-leaves",
+      name: "Open Navigation Leaves",
+      callback: () => void this.ensureNavigationLeaves()
+    });
+    this.addCommand({
+      id: "close-navigation-leaves",
+      name: "Close Navigation Leaves",
+      callback: () => this.closeNavigationLeaves()
+    });
     this.registerMarkdownCodeBlockProcessor("controlled-mermaid", async (source, el, ctx) => {
       const id28 = `controlled-mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       try {
@@ -158763,13 +158776,29 @@ var TreeDisplayPlugin = class extends Plugin {
         el.style.maxWidth = "100%";
         el.style.overflow = "hidden";
         el.classList.add("controlled-mermaid-block");
+        const isProjectDocument = /(^|\/)\_\_Project\.md$/.test(String(ctx?.sourcePath || ""));
+        el.classList.toggle("controlled-mermaid-project", isProjectDocument);
         const previewView = el.closest(".markdown-preview-view");
         const previewSizer = el.closest(".markdown-preview-sizer");
-        for (let parent4 = el.parentElement; parent4 && parent4 !== previewView; parent4 = parent4.parentElement) {
-          parent4.classList.add("controlled-mermaid-fill-parent");
+        const sourceDir = String(ctx?.sourcePath || "").replace(/\/[^/]*$/, "");
+        for (const description of previewView?.querySelectorAll?.(".controlled-domain-description[data-domain]") || []) {
+          const domainPath = `${sourceDir}/${description.dataset.domain}.md`;
+          description.style.setProperty("--domain-color", this.domainColor(domainPath, ctx?.sourcePath), "important");
         }
-        previewView?.classList.add("controlled-mermaid-preview");
-        previewSizer?.classList.add("controlled-mermaid-sizer");
+        const interfaceCard = el.closest?.('.callout[data-callout="usb-interface"]');
+        if (interfaceCard && ctx?.sourcePath) {
+          interfaceCard.style.setProperty("--domain-color", this.domainColor(ctx.sourcePath, ctx.sourcePath), "important");
+        }
+        if (isProjectDocument) {
+          for (let parent4 = el.parentElement; parent4 && parent4 !== previewView; parent4 = parent4.parentElement) {
+            parent4.classList.add("controlled-mermaid-fill-parent");
+          }
+          previewView?.classList.add("controlled-mermaid-preview");
+          previewSizer?.classList.add("controlled-mermaid-sizer");
+        } else {
+          previewView?.classList.remove("controlled-mermaid-preview");
+          previewSizer?.classList.remove("controlled-mermaid-sizer");
+        }
         el.innerHTML = rendered.svg;
         rendered.bindFunctions?.(el);
         const svg2 = el.querySelector("svg");
@@ -158783,7 +158812,7 @@ var TreeDisplayPlugin = class extends Plugin {
           const naturalHeight = Math.max(1, viewBox?.height || 1);
           const fitSvg = () => {
             const availableWidth = Math.max(1, el.clientWidth);
-            const availableHeight = Math.max(1, el.clientHeight);
+            const availableHeight = isProjectDocument ? Math.max(1, el.clientHeight) : naturalHeight;
             const scale2 = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
             svg2.style.width = `${Math.floor(naturalWidth * scale2)}px`;
             svg2.style.height = `${Math.floor(naturalHeight * scale2)}px`;
@@ -158796,13 +158825,12 @@ var TreeDisplayPlugin = class extends Plugin {
             observer.observe(el);
             this.register(() => observer.disconnect());
           }
-          if (rawSource.includes("@link-domain") || rawSource.includes("@link-module")) {
-            this.styleDomainDataFlows(svg2, id28);
-          }
           this.ensureSequenceArrows(svg2, dark);
         }
-        this.bindControlledMermaidLinks(el, rawSource, ctx?.sourcePath);
-        if (svg2 && rawSource.includes("@link-module")) {
+        if (!this.isModuleDocument(ctx?.sourcePath)) {
+          this.bindControlledMermaidLinks(el, rawSource, ctx?.sourcePath);
+        }
+        if (svg2 && (rawSource.includes("@link-module") || rawSource.includes("@link-interface"))) {
           this.styleDomainInterfaces(svg2, rawSource, ctx?.sourcePath);
         }
       } catch (error3) {
@@ -158813,7 +158841,50 @@ var TreeDisplayPlugin = class extends Plugin {
 ${details}` });
       }
     });
+    this.registerMarkdownPostProcessor((element3, ctx) => {
+      const sourcePath = String(ctx?.sourcePath || "");
+      const sourceName = sourcePath.split("/").pop() || "";
+      const isEnvironmentDocument = /^_[^/]+-ENV\.md$/i.test(sourceName);
+      if (isEnvironmentDocument) {
+        for (const link of [...element3.querySelectorAll("a.internal-link")]) {
+          const target = link.dataset.href || link.getAttribute("href") || "";
+          const resolved = navigation.resolveFile(this.app, target, sourcePath);
+          if (!resolved?.path) continue;
+          const targetName = resolved.path.split("/").pop() || "";
+          if (!targetName.endsWith(".md") || /^_[^/]+-ENV\.md$/i.test(targetName)) continue;
+          link.classList.add("controlled-domain-link");
+          link.style.setProperty("--domain-color", this.domainColor(resolved.path, sourcePath), "important");
+        }
+      }
+      for (const table of [...element3.querySelectorAll('.callout[data-callout="usb-interface"] table, .callout[data-callout="usb-method"] table')]) {
+        const header = table.querySelector("thead tr");
+        if (!header || header.cells[0]?.textContent?.trim() !== "\u6D4B\u8BD5") continue;
+        const content = table.closest(".callout-content");
+        const lastImplementation = content && [...content.children].filter(
+          (child) => child.matches("pre, .controlled-mermaid-block, .mermaid, .block-language-mermaid")
+        ).pop();
+        if (lastImplementation && lastImplementation.nextElementSibling !== table) {
+          lastImplementation.after(table);
+        }
+        for (const row of table.querySelectorAll("tbody tr")) {
+          const cell = row.cells[0];
+          if (!cell || cell.querySelector("input[type=checkbox]")) continue;
+          const checked = /\[x\]/i.test(cell.textContent || "");
+          cell.textContent = "";
+          const checkbox = element3.ownerDocument.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = checked;
+          checkbox.className = "controlled-test-checkbox";
+          cell.appendChild(checkbox);
+        }
+      }
+      if (!this.isModuleDocument(ctx?.sourcePath)) return;
+      for (const link of [...element3.querySelectorAll("a.internal-link")]) {
+        link.replaceWith(element3.ownerDocument.createTextNode(link.textContent || ""));
+      }
+    });
     this.registerDomEvent(document, "click", (event3) => this.handleMermaidClick(event3), true);
+    this.registerDomEvent(document, "click", (event3) => this.handleInternalTypeLink(event3), true);
     this.registerDomEvent(document, "mouseover", (event3) => this.handleMermaidHover(event3), true);
     this.lastPointer = null;
     this.registerDomEvent(document, "mousemove", (event3) => {
@@ -158862,54 +158933,101 @@ ${details}` });
   }
   bindControlledMermaidLinks(el, source, sourcePath) {
     if (sourcePath) el.setAttribute("data-obsidian-source-path", sourcePath);
-    const interfaceLinks = [];
-    for (const match2 of source.matchAll(/^\s*%%\s*@link-interface\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
-      interfaceLinks.push({
-        label: match2[1] || match2[2] || match2[3],
-        path: match2[4] || match2[5] || match2[6]
+    const links3 = [];
+    for (const match2 of source.matchAll(/^\s*%%\s*@link-(project|environment|interface|type)\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
+      links3.push({
+        target: match2[1],
+        label: match2[2] || match2[3] || match2[4],
+        path: match2[5] || match2[6] || match2[7]
       });
     }
-    const links3 = [];
     for (const match2 of source.matchAll(/^\s*%%\s*@link-(domain|module)\s+([^\s]+)\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
       links3.push({ target: match2[1], id: match2[2], path: match2[3] || match2[4] || match2[5] });
     }
     const svg2 = el.querySelector("svg");
     if (!svg2) return;
-    this.bindSequenceInterfaceLinks(svg2, interfaceLinks, sourcePath, source);
+    this.bindSequenceInterfaceLinks(svg2, links3, sourcePath, source);
     const groups = [...svg2.querySelectorAll("g")];
     for (const link of links3) {
       const group2 = groups.find((candidate) => {
         const id28 = candidate.getAttribute("id") || "";
-        const matchesNode = candidate.classList.contains("node") && (id28 === link.id || id28.startsWith(`flowchart-${link.id}-`) || candidate.getAttribute("data-id") === link.id);
+        const text4 = (candidate.textContent || "").replace(/\s+/g, " ").trim();
+        const matchesNode = candidate.classList.contains("node") && (link.id && (id28 === link.id || id28.startsWith(`flowchart-${link.id}-`) || id28.includes(`-${link.id}-`) || id28.endsWith(`-${link.id}`) || candidate.getAttribute("data-id") === link.id) || link.target === "interface" && link.label && text4 === link.label);
         if (matchesNode) return true;
         return link.target === "domain" && candidate.classList.contains("cluster") && (id28 === link.id || id28.includes(link.id));
       });
-      if (!group2) continue;
-      group2.dataset.obsidianLink = link.path;
-      group2.dataset.obsidianTarget = link.target;
-      group2.classList.add("obsidian-mermaid-link", `obsidian-mermaid-${link.target}`);
-      group2.setAttribute("tabindex", "0");
-      group2.setAttribute("role", "link");
-      group2.setAttribute("aria-label", `\u6253\u5F00${link.target === "domain" ? "\u9886\u57DF" : "\u6A21\u5757"}\uFF1A${link.path}`);
-      group2.addEventListener("click", (event3) => {
-        event3.preventDefault();
-        event3.stopPropagation();
-        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
-      });
-      group2.addEventListener("keydown", (event3) => {
-        if (event3.key !== "Enter" && event3.key !== " ") return;
-        event3.preventDefault();
-        void this.openInNavigationLeaf(link.path, link.target, sourcePath);
-      });
+      const targets = group2 ? [group2] : link.target === "type" ? this.findTypeEdgeTargets(svg2, link.label) : link.target === "environment" ? this.findLabeledTextTargets(svg2, link.label) : [];
+      for (const target of targets) {
+        target.dataset.obsidianLink = link.path;
+        target.dataset.obsidianTarget = link.target;
+        target.classList.add("obsidian-mermaid-link", `obsidian-mermaid-${link.target}`);
+        target.style.setProperty("cursor", "pointer", "important");
+        if (link.target === "type") {
+          target.style.setProperty("fill", "var(--link-color)", "important");
+          target.style.setProperty("color", "var(--link-color)", "important");
+          target.style.setProperty("text-decoration", "underline", "important");
+        }
+        target.setAttribute("tabindex", "0");
+        target.setAttribute("role", "link");
+        target.setAttribute("aria-label", `\u6253\u5F00${this.navigationTargetLabel(this.navigationTargetForLink(link.target))}\uFF1A${link.path}`);
+        target.addEventListener("click", (event3) => {
+          event3.preventDefault();
+          event3.stopPropagation();
+          void this.openInNavigationLeaf(link.path, this.navigationTargetForLink(link.target), sourcePath);
+        });
+        target.addEventListener("keydown", (event3) => {
+          if (event3.key !== "Enter" && event3.key !== " ") return;
+          event3.preventDefault();
+          void this.openInNavigationLeaf(link.path, this.navigationTargetForLink(link.target), sourcePath);
+        });
+      }
     }
   }
+  findTypeEdgeTargets(svg2, typeName) {
+    const normalize4 = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const matches33 = [...svg2.querySelectorAll(".edgeLabel")].filter((edgeLabel) => {
+      const value = normalize4(edgeLabel.textContent);
+      return value === typeName || new RegExp(`(?:^|[\\s:])${typeName}$`).test(value);
+    });
+    return matches33.map((edgeLabel) => this.linkOnlyTypeText(edgeLabel, typeName)).filter(Boolean);
+  }
+  findLabeledTextTargets(svg2, label) {
+    const normalize4 = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    return [...svg2.querySelectorAll("text, .boxText, .labelText")].filter(
+      (candidate) => normalize4(candidate.textContent) === normalize4(label)
+    );
+  }
+  linkOnlyTypeText(edgeLabel, typeName) {
+    const normalize4 = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const fullText = normalize4(edgeLabel.textContent);
+    const htmlLeaf = [...edgeLabel.querySelectorAll("span, p")].find((candidate) => normalize4(candidate.textContent) === fullText && !candidate.querySelector("span, p"));
+    if (!htmlLeaf) return edgeLabel;
+    const rawText = htmlLeaf.textContent || "";
+    const start3 = rawText.lastIndexOf(typeName);
+    if (start3 < 0 || rawText.slice(start3 + typeName.length).trim()) return edgeLabel;
+    const document2 = edgeLabel.ownerDocument;
+    const type3 = document2.createElement("span");
+    type3.textContent = typeName;
+    type3.classList.add("obsidian-mermaid-type-token");
+    htmlLeaf.replaceChildren(
+      document2.createTextNode(rawText.slice(0, start3)),
+      type3,
+      document2.createTextNode(rawText.slice(start3 + typeName.length))
+    );
+    return type3;
+  }
   bindSequenceInterfaceLinks(svg2, links3, sourcePath, source) {
-    if (!links3.length) return;
+    const domainLinks = links3.filter((link) => link.target === "domain");
+    const interfaceLinks = links3.filter((link) => link.target === "interface");
+    if (!domainLinks.length && !interfaceLinks.length) return;
     const labels = [...svg2.querySelectorAll(".messageText")];
     const normalizeMessage = (value) => String(value || "").replace(/\s+/g, " ").trim();
     const participantOrder = [...String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)/gm)].map((m2) => m2[1]);
     const pathByParticipant = /* @__PURE__ */ new Map();
-    for (const link of links3) {
+    for (const link of domainLinks) {
+      pathByParticipant.set(link.id, link.path);
+    }
+    for (const link of interfaceLinks) {
       const line2 = String(source || "").split("\n").find((entry) => {
         const match3 = entry.match(/^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/);
         return match3 && normalizeMessage(match3[3]) === normalizeMessage(link.label);
@@ -158917,7 +159035,7 @@ ${details}` });
       const match2 = line2?.match(/^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)\s*([A-Za-z_][\w-]*)\s*:/);
       if (match2) pathByParticipant.set(match2[2], link.path);
     }
-    const domainParticipants = participantOrder.filter((id28) => pathByParticipant.has(id28));
+    const domainParticipants = participantOrder.filter((id28) => id28 !== "USER" && pathByParticipant.has(id28));
     const boxes = [...svg2.querySelectorAll("rect.box")];
     domainParticipants.forEach((participant, index) => {
       const box = boxes[index];
@@ -158926,31 +159044,148 @@ ${details}` });
       box.style.setProperty("fill-opacity", "0.12", "important");
     });
     this.styleSequenceParticipants(svg2, pathByParticipant, sourcePath, source);
-    for (const link of links3) {
+    for (const link of interfaceLinks) {
       const color2 = this.domainColor(link.path, sourcePath);
       const expected = normalizeMessage(link.label);
       const matches33 = labels.filter((label) => normalizeMessage(label.textContent) === expected);
       for (const label of matches33) {
-        label.dataset.obsidianLink = link.path;
-        label.dataset.obsidianTarget = "domain";
-        label.classList.add("obsidian-mermaid-link", "obsidian-mermaid-interface");
         label.style.setProperty("fill", color2, "important");
         label.style.setProperty("color", color2, "important");
         const messageIndex = labels.indexOf(label);
         this.styleSequenceMessageByIndex(svg2, messageIndex, color2);
-        label.setAttribute("tabindex", "0");
-        label.setAttribute("role", "link");
-        label.setAttribute("aria-label", `\u6253\u5F00\u9886\u57DF\uFF1A${link.path}`);
-        label.addEventListener("click", (event3) => {
-          event3.preventDefault();
-          event3.stopPropagation();
-          void this.openInNavigationLeaf(link.path, "domain", sourcePath);
+      }
+    }
+    this.styleSequenceCallsByTarget(svg2, source, pathByParticipant, sourcePath);
+    this.styleSequenceActivations(svg2, pathByParticipant, sourcePath);
+  }
+  styleSequenceCallsByTarget(svg2, source, pathByParticipant, sourcePath) {
+    const labels = [...svg2.querySelectorAll(".messageText")];
+    const lines = [...svg2.querySelectorAll(".messageLine0, .messageLine1")];
+    const messagePattern = /^\s*([A-Za-z_][\w-]*)\s*(?:->>|-->>|->|-->|-x|--x)[+-]?\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/;
+    const messages = String(source || "").split("\n").map((line2) => line2.match(messagePattern)).filter(Boolean);
+    if (messages.length !== labels.length || messages.length !== lines.length) return;
+    for (const [index, match2] of messages.entries()) {
+      const [, , target] = match2;
+      const path3 = pathByParticipant.get(target);
+      if (!path3) continue;
+      const color2 = this.domainColor(path3, sourcePath);
+      const label = labels[index];
+      label.style.setProperty("fill", color2, "important");
+      label.style.setProperty("color", color2, "important");
+      this.styleSequenceMessageByIndex(svg2, index, color2);
+    }
+  }
+  styleSequenceActivations(svg2, pathByParticipant, sourcePath) {
+    const actorLines = [...svg2.querySelectorAll("line.actor-line")];
+    const activations = [...svg2.querySelectorAll("rect.activation0, rect.activation1, rect.activation2")];
+    for (const activation of activations) {
+      const center3 = Number(activation.getAttribute("x")) + Number(activation.getAttribute("width")) / 2;
+      if (!Number.isFinite(center3)) continue;
+      const actorLine = actorLines.map((line2) => ({
+        line: line2,
+        distance: Math.abs(Number(line2.getAttribute("x1")) - center3)
+      })).sort((left2, right2) => left2.distance - right2.distance)[0]?.line;
+      if (!actorLine) continue;
+      const actorX = Number(actorLine.getAttribute("x1"));
+      const participant = [...pathByParticipant.keys()].find((id28) => {
+        const line2 = actorLines.find((candidate) => {
+          const value = candidate.getAttribute("name") || candidate.getAttribute("data-name") || "";
+          return value === id28 || value.includes(id28);
         });
-        label.addEventListener("keydown", (event3) => {
-          if (event3.key !== "Enter" && event3.key !== " ") return;
-          event3.preventDefault();
-          void this.openInNavigationLeaf(link.path, "domain", sourcePath);
-        });
+        return line2 && Math.abs(Number(line2.getAttribute("x1")) - actorX) < 2;
+      });
+      const path3 = participant ? pathByParticipant.get(participant) : null;
+      if (!path3) continue;
+      const color2 = this.domainColor(path3, sourcePath);
+      activation.style.setProperty("fill", color2, "important");
+      activation.style.setProperty("fill-opacity", "0.18", "important");
+      activation.style.setProperty("stroke", color2, "important");
+      activation.style.setProperty("stroke-width", "2px", "important");
+    }
+  }
+  renderSequenceInterfaceMarkers(svg2, source, pathByParticipant, sourcePath) {
+    const bindings = [];
+    for (const match2 of String(source || "").matchAll(/^\s*%%\s*@domain-interface\s+([A-Za-z_][\w-]*)\s+(?:"([^"]+)"|'([^']+)')\s+(?:"([^"]+)"|'([^']+)')\s*$/gm)) {
+      bindings.push({ participant: match2[1], name: match2[2] || match2[3], reason: match2[4] || match2[5] });
+    }
+    if (!bindings.length) return;
+    const labels = [...svg2.querySelectorAll(".messageText")];
+    const lines = [...svg2.querySelectorAll(".messageLine0, .messageLine1")];
+    const actorLines = [...svg2.querySelectorAll("line.actor-line")];
+    const normalize4 = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const participantNames = /* @__PURE__ */ new Map();
+    for (const match2 of String(source || "").matchAll(/^\s*(?:participant|actor)\s+([A-Za-z_][\w-]*)\s+as\s+(.+)$/gm)) {
+      participantNames.set(match2[1], match2[2].trim());
+    }
+    const usedLabels = /* @__PURE__ */ new Set();
+    const interfaces = /* @__PURE__ */ new Map();
+    for (const binding of bindings) {
+      const path3 = pathByParticipant.get(binding.participant);
+      if (!path3) continue;
+      const name = participantNames.get(binding.participant) || binding.participant;
+      const actorLine = actorLines.find((line2) => {
+        const value = line2.getAttribute("name") || line2.getAttribute("data-name") || "";
+        return value === binding.participant || value === name || value.includes(binding.participant) || value.includes(name);
+      });
+      if (!actorLine) continue;
+      const label = labels.find((candidate) => !usedLabels.has(candidate) && normalize4(candidate.textContent) === normalize4(binding.reason));
+      if (!label) continue;
+      usedLabels.add(label);
+      let y4 = Number(label.getAttribute("y"));
+      if (!Number.isFinite(y4)) {
+        try {
+          const box = label.getBBox();
+          y4 = box.y + box.height / 2;
+        } catch (_2) {
+          continue;
+        }
+      }
+      const x4 = Number(actorLine.getAttribute("x1"));
+      if (!Number.isFinite(x4) || !Number.isFinite(y4)) continue;
+      const key = `${binding.participant}\0${binding.name}`;
+      const current = interfaces.get(key) || {
+        participant: binding.participant,
+        name: binding.name,
+        path: path3,
+        x: x4,
+        ys: [],
+        messageIndexes: []
+      };
+      current.ys.push(y4);
+      current.messageIndexes.push(labels.indexOf(label));
+      interfaces.set(key, current);
+    }
+    for (const entry of interfaces.values()) {
+      const name = participantNames.get(entry.participant) || entry.participant;
+      const color2 = this.domainColor(entry.path, sourcePath);
+      const width3 = Math.max(56, Math.min(132, 20 + entry.name.length * 14));
+      const top2 = Math.min(...entry.ys) - 13;
+      const bottom2 = Math.max(...entry.ys) + 13;
+      const height2 = Math.max(26, bottom2 - top2);
+      const group2 = svg2.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+      group2.classList.add("controlled-mermaid-sequence-interface");
+      group2.setAttribute("aria-label", `${name} \u63A5\u53E3\uFF1A${entry.name}`);
+      const rect3 = svg2.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect3.setAttribute("x", String(entry.x - width3 / 2));
+      rect3.setAttribute("y", String(top2));
+      rect3.setAttribute("width", String(width3));
+      rect3.setAttribute("height", String(height2));
+      rect3.setAttribute("rx", "2");
+      rect3.style.setProperty("fill", "var(--background-primary)", "important");
+      rect3.style.setProperty("stroke", color2, "important");
+      rect3.style.setProperty("stroke-width", "2px", "important");
+      const text4 = svg2.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "text");
+      text4.setAttribute("x", String(entry.x));
+      text4.setAttribute("y", String(top2 + 18));
+      text4.setAttribute("text-anchor", "middle");
+      text4.setAttribute("font-size", "13");
+      text4.style.setProperty("fill", color2, "important");
+      text4.style.setProperty("font-weight", "700", "important");
+      text4.textContent = entry.name;
+      group2.append(rect3, text4);
+      svg2.appendChild(group2);
+      for (const messageIndex of entry.messageIndexes) {
+        if (messageIndex >= 0 && lines[messageIndex]) this.styleSequenceMessageByIndex(svg2, messageIndex, color2);
       }
     }
   }
@@ -158961,22 +159196,80 @@ ${details}` });
     }
     const actorLines = [...svg2.querySelectorAll("line.actor-line")];
     const actorShapes = [...svg2.querySelectorAll("rect.actor, rect.actor-top, rect.actor-bottom")];
+    const userLine = actorLines.find((candidate) => {
+      const value = candidate.getAttribute("name") || candidate.getAttribute("data-name") || "";
+      return value === "USER" || value.includes("USER") || value.includes("\u7528\u6237");
+    });
+    if (userLine) {
+      const userX = Number(userLine.getAttribute("x1"));
+      const userColor = "#ffffff";
+      userLine.style.setProperty("stroke", userColor, "important");
+      userLine.style.setProperty("stroke-width", "2px", "important");
+      for (const shape of actorShapes) {
+        const center3 = Number(shape.getAttribute("x")) + Number(shape.getAttribute("width")) / 2;
+        if (Math.abs(center3 - userX) > 2) continue;
+        shape.style.setProperty("fill", "transparent", "important");
+        shape.style.setProperty("stroke", userColor, "important");
+        shape.querySelectorAll("text, tspan").forEach((text4) => text4.style.setProperty("fill", userColor, "important"));
+      }
+      svg2.querySelectorAll("text, tspan").forEach((text4) => {
+        const textX = Number(text4.getAttribute("x"));
+        if (Number.isFinite(textX) && Math.abs(textX - userX) <= 2) text4.style.setProperty("fill", userColor, "important");
+      });
+    }
     for (const [participant, path3] of pathByParticipant) {
+      if (participant === "USER") continue;
       const name = participantNames.get(participant);
-      const line2 = actorLines.find((candidate) => candidate.getAttribute("name") === name);
+      const line2 = actorLines.find((candidate) => {
+        const lineName = candidate.getAttribute("name") || candidate.getAttribute("data-name") || "";
+        return lineName === name || lineName === participant || lineName.includes(participant) || lineName.includes(name);
+      });
       if (!line2) continue;
       const x4 = Number(line2.getAttribute("x1"));
       const color2 = this.domainColor(path3, sourcePath);
+      line2.style.setProperty("stroke", color2, "important");
+      line2.style.setProperty("stroke-width", "2px", "important");
       for (const shape of actorShapes) {
         const center3 = Number(shape.getAttribute("x")) + Number(shape.getAttribute("width")) / 2;
         if (Math.abs(center3 - x4) > 2) continue;
-        shape.style.setProperty("fill", color2, "important");
+        shape.style.setProperty("fill", "transparent", "important");
         shape.style.setProperty("stroke", color2, "important");
+        shape.classList.add("obsidian-mermaid-link", "obsidian-mermaid-domain-header");
+        shape.dataset.obsidianLink = path3;
+        shape.dataset.obsidianTarget = "domain";
+        shape.setAttribute("tabindex", "0");
+        shape.setAttribute("role", "link");
+        shape.setAttribute("aria-label", `\u6253\u5F00\u9886\u57DF\uFF1A${path3}`);
+        const openDomain = (event3) => {
+          event3.preventDefault();
+          event3.stopPropagation();
+          void this.openInNavigationLeaf(path3, "domain", sourcePath);
+        };
+        shape.addEventListener("click", openDomain);
+        shape.addEventListener("keydown", (event3) => {
+          if (event3.key === "Enter" || event3.key === " ") openDomain(event3);
+        });
         const parent4 = shape.parentElement;
         parent4?.querySelectorAll("text, tspan, .text").forEach((text4) => {
           text4.style.setProperty("fill", color2, "important");
           text4.style.setProperty("color", color2, "important");
         });
+      }
+      for (const text4 of svg2.querySelectorAll("text, tspan")) {
+        const textX = Number(text4.getAttribute("x"));
+        if (Number.isFinite(textX) && Math.abs(textX - x4) <= 2) {
+          text4.style.setProperty("fill", color2, "important");
+          text4.style.setProperty("color", color2, "important");
+          text4.classList.add("obsidian-mermaid-link", "obsidian-mermaid-domain-header");
+          text4.dataset.obsidianLink = path3;
+          text4.dataset.obsidianTarget = "domain";
+          text4.style.setProperty("cursor", "pointer", "important");
+          text4.addEventListener("click", (event3) => {
+            event3.preventDefault();
+            event3.stopPropagation();
+            void this.openInNavigationLeaf(path3, "domain", sourcePath);
+          });
+        }
       }
     }
   }
@@ -159107,11 +159400,20 @@ ${details}` });
   styleDomainInterfaces(svg2, source, sourcePath) {
     if (!sourcePath) return;
     const graphSource = source.replace(/^\s*%%.*$/gm, "");
-    const interfaceIds = new Set(
-      [...graphSource.matchAll(/\b([A-Za-z_][\w-]*)\s*\[\[[^\]]/g)].map((match2) => match2[1])
+    const interfaceOwners = /* @__PURE__ */ new Map();
+    for (const match2 of source.matchAll(/^\s*%%\s*@link-interface\s+(?:([^\s]+)\s+)?(?:"([^"]+)"|'([^']+)'|([^\s]+))\s+(?:\[\[([^\]]+)\]\]|"([^"]+)"|'([^']+)')\s*$/gm)) {
+      const id28 = match2[1] || match2[2] || match2[3] || match2[4];
+      const path3 = match2[5] || match2[6] || match2[7];
+      if (id28) interfaceOwners.set(id28, path3);
+    }
+    const interfaceIds = /* @__PURE__ */ new Set([
+      ...[...graphSource.matchAll(/\b([A-Za-z_][\w-]*)\s*\[\[[^\]]/g)].map((match2) => match2[1]),
+      ...interfaceOwners.keys()
+    ]);
+    const moduleIds = new Set(
+      [...source.matchAll(/^\s*%%\s*@link-module\s+([A-Za-z_][\w-]*)\s+/gm)].map((match2) => match2[1])
     );
-    if (!interfaceIds.size) return;
-    const color2 = this.domainColorForKey(sourcePath);
+    if (!interfaceIds.size && !moduleIds.size) return;
     for (const cluster of svg2.querySelectorAll("g.cluster")) {
       cluster.classList.remove("obsidian-mermaid-module-frame");
       cluster.style.removeProperty("--domain-color");
@@ -159130,9 +159432,11 @@ ${details}` });
     for (const interfaceId of interfaceIds) {
       const node2 = nodes5.find((candidate) => {
         const id28 = candidate.getAttribute("id") || "";
-        return id28 === interfaceId || id28.startsWith(`flowchart-${interfaceId}-`) || candidate.getAttribute("data-id") === interfaceId;
+        const text4 = (candidate.textContent || "").replace(/\s+/g, " ").trim();
+        return id28 === interfaceId || id28.startsWith(`flowchart-${interfaceId}-`) || candidate.getAttribute("data-id") === interfaceId || text4 === interfaceId;
       });
       if (!node2) continue;
+      const color2 = this.domainColor(interfaceOwners.get(interfaceId) || sourcePath, sourcePath);
       node2.classList.add("obsidian-mermaid-domain-interface");
       node2.style.setProperty("--domain-color", color2);
       const shapes4 = node2.querySelectorAll("rect, polygon, path, circle, ellipse, .label-container");
@@ -159234,24 +159538,190 @@ ${details}` });
       }
     }
   }
-  async openInNavigationLeaf(path3, target, sourcePath) {
+  navigationTargetForLink(target) {
+    return target === "interface" ? "domain" : NAVIGATION_TARGETS.includes(target) ? target : "domain";
+  }
+  navigationTargetLabel(target) {
+    return {
+      project: "\u9879\u76EE",
+      environment: "\u73AF\u5883",
+      domain: "\u9886\u57DF",
+      module: "\u6A21\u5757",
+      type: "\u7C7B\u578B"
+    }[target] || "\u6587\u6863";
+  }
+  isModuleDocument(sourcePath) {
+    const parts = String(sourcePath || "").split("/").filter(Boolean);
+    return parts.length >= 3 && /-ENV$/i.test(parts[parts.length - 3]);
+  }
+  findNavigationLeaf(target) {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
-    let leaf = this.navigationLeaves[target];
-    if (!leaf || !markdownLeaves.includes(leaf)) {
-      leaf = markdownLeaves.find(
-        (candidate) => candidate.containerEl?.dataset.treeViewNavigationTarget === target
-      );
-    }
-    if (!leaf) {
-      leaf = this.app.workspace.getLeaf("split", "vertical");
-      this.navigationLeaves[target] = leaf;
-    }
+    const remembered = this.navigationLeaves[target];
+    if (remembered?.containerEl?.isConnected) return remembered;
+    return markdownLeaves.find(
+      (candidate) => candidate.containerEl?.dataset.treeViewNavigationTarget === target || candidate.tabHeaderEl?.dataset.treeViewNavigationTarget === target
+    ) || null;
+  }
+  assignNavigationLeaf(leaf, target) {
+    if (!leaf) return null;
     this.navigationLeaves[target] = leaf;
-    if (leaf.containerEl) leaf.containerEl.dataset.treeViewNavigationTarget = target;
-    return navigation.openFileInLeaf(this.app, path3, leaf, sourcePath);
+    if (leaf.containerEl) {
+      leaf.containerEl.dataset.treeViewNavigationTarget = target;
+      leaf.containerEl.dataset.treeViewNavigationVersion = NAVIGATION_LAYOUT_VERSION;
+    }
+    if (leaf.tabHeaderEl) {
+      leaf.tabHeaderEl.dataset.treeViewNavigationTarget = target;
+      leaf.tabHeaderEl.dataset.treeViewNavigationVersion = NAVIGATION_LAYOUT_VERSION;
+      const tabContainer = leaf.tabHeaderEl.closest(".workspace-tab-header-container");
+      if (tabContainer) {
+        tabContainer.classList.add("tree-view-fixed-navigation-tabs");
+        for (const button of tabContainer.querySelectorAll(
+          ".workspace-tab-header-new-tab, .workspace-tab-header-new-tab-button, [class*='new-tab'], [aria-label*='New tab'], [aria-label*='\u65B0\u5EFA\u6807\u7B7E']"
+        )) {
+          button.style.setProperty("display", "none", "important");
+        }
+      }
+      let marker = leaf.tabHeaderEl.querySelector(".tree-view-navigation-marker");
+      if (!marker) {
+        marker = leaf.tabHeaderEl.ownerDocument.createElement("span");
+        marker.className = "tree-view-navigation-marker";
+        leaf.tabHeaderEl.appendChild(marker);
+      }
+      marker.textContent = `[${this.navigationTargetLabel(target)}]`;
+      marker.setAttribute("aria-label", `${this.navigationTargetLabel(target)} \u56FA\u5B9A\u7A97\u53E3`);
+    }
+    return leaf;
+  }
+  migrateNavigationLeafOrder() {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    const ownedLeaves = leaves.filter(
+      (leaf) => leaf.containerEl?.dataset.treeViewNavigationTarget
+    );
+    const needsMigration = ownedLeaves.some(
+      (leaf) => leaf.containerEl?.dataset.treeViewNavigationVersion !== NAVIGATION_LAYOUT_VERSION
+    );
+    if (!needsMigration) return;
+    for (const leaf of new Set(ownedLeaves)) {
+      if (typeof leaf.detach === "function") leaf.detach();
+    }
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
+  }
+  environmentDescriptorForDomain(file) {
+    if (!file?.path || !file.path.endsWith(".md")) return null;
+    const domain = file.path.split("/").pop().replace(/\.md$/, "");
+    const root5 = file.path.split("/").slice(0, -1).join("/");
+    const environmentDescriptors = this.app.vault.getMarkdownFiles().filter(
+      (candidate) => candidate.path.startsWith(`${root5}/_`) && /-ENV\.md$/i.test(candidate.path)
+    );
+    for (const descriptor of environmentDescriptors) {
+      const environment = descriptor.path.split("/").pop().replace(/\.md$/, "").slice(1);
+      const implementation = this.app.vault.getAbstractFileByPath(`${root5}/${environment}/${domain}`);
+      if (implementation?.children) return descriptor;
+    }
+    return null;
+  }
+  async ensureNavigationLeaves() {
+    if (this.navigationLeavesReady) return this.navigationLeavesReady;
+    this.navigationLeavesReady = (async () => {
+      this.migrateNavigationLeafOrder();
+      const reservedLeaves = /* @__PURE__ */ new Set();
+      for (const target of [...NAVIGATION_TARGETS].reverse()) {
+        const existing = this.findNavigationLeaf(target);
+        if (existing && !reservedLeaves.has(existing)) {
+          this.assignNavigationLeaf(existing, target);
+          reservedLeaves.add(existing);
+          continue;
+        }
+        const projectLeaf = target === "project" ? this.app.workspace.getLeavesOfType("markdown").find(
+          (candidate) => !reservedLeaves.has(candidate) && /(^|\/)__Project\.md$/.test(String(candidate.view?.file?.path || ""))
+        ) || (() => {
+          const active = this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.leaf;
+          return reservedLeaves.has(active) ? null : active;
+        })() : null;
+        let leaf = projectLeaf || this.app.workspace.getLeaf("split", "vertical");
+        while (reservedLeaves.has(leaf)) {
+          leaf = this.app.workspace.getLeaf("split", "vertical");
+        }
+        this.assignNavigationLeaf(leaf, target);
+        reservedLeaves.add(leaf);
+      }
+    })();
+    try {
+      await this.navigationLeavesReady;
+    } catch (error3) {
+      this.navigationLeavesReady = null;
+      throw error3;
+    }
+    return this.navigationLeavesReady;
+  }
+  async openInNavigationLeaf(path3, target, sourcePath) {
+    const normalizedTarget = this.navigationTargetForLink(target);
+    const leaf = this.findNavigationLeaf(normalizedTarget);
+    if (!leaf) {
+      new Notice("\u8BF7\u5148\u6267\u884C Open Navigation Leaves \u6253\u5F00\u4E94\u4E2A\u56FA\u5B9A\u7A97\u53E3");
+      return null;
+    }
+    const file = navigation.resolveFile(this.app, path3, sourcePath);
+    if (!file) return navigation.openFileInLeaf(this.app, path3, leaf, sourcePath);
+    if (normalizedTarget === "domain") {
+      const environmentFile = this.environmentDescriptorForDomain(file);
+      if (environmentFile) {
+        await this.openResolvedFileInNavigationLeaf(environmentFile, "environment");
+      }
+    }
+    return this.openResolvedFileInNavigationLeaf(file, normalizedTarget);
+  }
+  async openResolvedFileInNavigationLeaf(file, target) {
+    const leaf = this.findNavigationLeaf(target);
+    if (!leaf) {
+      new Notice("\u8BF7\u5148\u6267\u884C Open Navigation Leaves \u6253\u5F00\u4E94\u4E2A\u56FA\u5B9A\u7A97\u53E3");
+      return null;
+    }
+    await leaf.openFile(file);
+    this.assignNavigationLeaf(leaf, target);
+    this.app.workspace.revealLeaf(leaf);
+    if (leaf.view?.file?.path !== file.path) {
+      await leaf.openFile(file);
+      this.app.workspace.revealLeaf(leaf);
+    }
+    return leaf;
+  }
+  closeNavigationLeaves() {
+    const ownedLeaves = /* @__PURE__ */ new Set([
+      ...Object.values(this.navigationLeaves || {}).filter(Boolean),
+      ...this.app.workspace.getLeavesOfType("markdown").filter(
+        (leaf) => leaf.containerEl?.dataset.treeViewNavigationTarget
+      )
+    ]);
+    for (const leaf of ownedLeaves) {
+      if (typeof leaf.detach === "function") leaf.detach();
+    }
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
+  }
+  async handleInternalTypeLink(event3) {
+    const link = event3.target?.closest?.("a.internal-link, a[data-href]");
+    if (!link || !link.classList.contains("internal-link") && !link.dataset.href) return;
+    const leaf = this.app.workspace.getLeavesOfType("markdown").find(
+      (candidate) => candidate.containerEl?.contains(event3.target)
+    );
+    const sourcePath = leaf?.view?.file?.path || this.app.workspace.getActiveViewOfType(require("obsidian").MarkdownView)?.file?.path;
+    if (!sourcePath) return;
+    const targetPath = link.dataset.href || link.getAttribute("href");
+    const file = navigation.resolveFile(this.app, targetPath, sourcePath);
+    if (!file) return;
+    const sourceName = sourcePath.split("/").pop() || "";
+    const sourceDirectory = sourcePath.slice(0, sourcePath.lastIndexOf("/"));
+    const isEnvironmentDomainLink = /^_[^/]+-ENV\.md$/i.test(sourceName) && file.path.startsWith(`${sourceDirectory}/`) && file.path.split("/").length === sourceDirectory.split("/").length + 1 && !file.path.split("/").pop().startsWith("_");
+    if (!isEnvironmentDomainLink && file.parent?.name !== "Types") return;
+    event3.preventDefault();
+    event3.stopPropagation();
+    await this.openResolvedFileInNavigationLeaf(file, isEnvironmentDomainLink ? "domain" : "type");
   }
   onunload() {
-    this.navigationLeaves = { domain: null, module: null };
+    this.navigationLeaves = Object.fromEntries(NAVIGATION_TARGETS.map((target) => [target, null]));
+    this.navigationLeavesReady = null;
   }
   async enhanceMermaidLinks(el, ctx) {
     const sourcePath = ctx?.sourcePath;
